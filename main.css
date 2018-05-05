@@ -1,0 +1,298 @@
+@media screen {
+
+  body {
+    font-family: Arial,sans-serif;
+  }
+  
+  input.selectwb {
+    border: none;
+    background: none;
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline;
+    margin: 0;
+    padding: 0;
+    font-size: 1.0em;
+  }  
+
+  input.shwedtgrp {
+    border: none;
+    background: none;
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline;
+    margin: 0;
+    padding: 0;
+    font-size: 1.0em;
+  }
+
+  input.shwgrprtg {
+    border: none;
+    background: none;
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline;
+    margin: 0;
+    padding: 0;
+    font-size: 1.0em;
+  }
+
+  table {
+    background-color: #eee;
+    border-radius: 0.7em;
+    border: 1px solid;
+    width: 800px;
+  }
+
+  table.wertungskopf {
+    font-size: 0.8em;
+  }
+ 
+  table.wertungskopf th {
+    font-size: 1.2em;
+    text-align: center;
+  }
+
+  table.wbselecttable {
+    background-color: #eee;
+    border-radius: 0.7em;
+    border: 1px solid;
+    width: 950px;
+  }
+
+  table.lspresulttable {
+    background-color: #eee;
+    border-radius: 0.7em;
+    border: 1px solid;
+    width: 950px;
+  }
+
+  table.lspresulttable td {
+    vertical-align: top;
+  }
+
+  table.lspresulttable td.red {
+    vertical-align: top;
+    color: #f00;
+  }
+  
+  table.lspresulttable td.green {
+    vertical-align: top;
+    color: #090;
+  }
+
+  th {
+    text-align: left;
+  }
+
+  a {
+    text-decoration: none;
+    color: black;
+  }
+
+  table.grpmbs td input.nr {
+    width: 40px;
+  }
+
+  table.grpmbs td input.sn, table.grpmbs td input.gn {
+    width: 150px;
+  }
+
+  table.grpmbs td input.dt {
+    width: 100px;
+  }
+
+  .menu table {
+    background: none;
+    border: none;
+    display: inline;
+  }
+
+  .menubutton {
+    border-radius: 5px;
+    padding: 5px;
+    margin: 0;
+    box-shadow: 0px;
+    display: inline;
+    background-color: #ffff99;
+  }
+  
+  .error {
+    font-weight: bold;
+    background-color: #ffaaaa;
+  }
+
+  table.gettoken {
+    width: 280px;
+  }
+}
+
+@media print {
+  .menu {
+    display: none;
+  }
+
+  .menubutton {
+    display: none;
+  }
+
+  .edtgrpmbr {
+    display: none;
+  }
+
+  .rtggrp {
+    display: none;
+  }
+  
+  .button {
+    display: none;
+  }
+  
+  .logo {
+    display: none;
+  }
+
+  .error {
+    display: none;
+  }
+
+  body {
+    font-family: Arial,sans-serif;
+  }
+
+  h4 {
+    font-size: 0.7em;
+  }
+
+  input.shwedtgrp {
+    border: none;
+    background: none;
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline;
+    margin: 0;
+    padding: 0;
+    font-size: 1.0em;
+  }
+
+  input.shwgrprtg {
+    border: none;
+    background: none;
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline;
+    margin: 0;
+    padding: 0;
+    font-size: 1.0em;
+  }
+
+  table {
+    background-color: #eee;
+    border-radius: 0.7em;
+    border: none;
+    width: 600px;
+  }
+
+  th {
+    text-align: left;
+  }
+
+  a {
+    text-decoration: none;
+    color: black;
+  }
+
+  table.wertungskopf {
+    font-size: 0.8em;
+  }
+
+  table.wertungskopf th {
+    font-size: 1.2em;
+    text-align: center;
+  }
+
+  table.bewerter {
+    font-size: 0.8em;
+  }
+
+  table.grpmbs td input.nr {
+    width: 30px;
+  }
+
+  table.grpmbs td input.sn, table.grpmbs td input.gn {
+    width: 150px;
+  }
+
+  table.grpmbs td input.dt {
+    width: 100px;
+  }
+
+  table.finrtg {
+    width: 100%;
+    border: 1px solid;
+    border-radius: 0;
+    font-size: 1.5em;
+  }
+
+  table.lspresulttable {
+    border-radius: 0;
+    border: none;
+    width: 100%;
+    font-size: 0.9em;
+  }
+
+  table.lspresulttable td {
+    vertical-align: top;
+  }
+
+  table.bewertung {
+    border: 1px solid black;
+    border-radius: 0;
+    border-collapse: collapse;
+  }
+
+  table.bewertung td {
+    border-bottom: 1px solid black;
+    border-left: 1px solid black;
+  }
+
+  table.teilnehmer {
+    border: 1px solid black;
+    border-radius: 0;
+    border-collapse: collapse;
+  }
+  
+  table.teilnehmer td {
+    border-bottom: 1px solid black;
+  } 
+ 
+  input.nr, input.sn, input.gn, input.dt {
+    border: none;
+    background: none;
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline;
+    margin: 0;
+    padding: 0;
+    font-size: 1.0em;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: none;
+  }
+
+
+}
