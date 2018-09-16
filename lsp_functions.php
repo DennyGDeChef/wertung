@@ -398,7 +398,6 @@ function form_edit_lsp_group($db,$abnahme,$gid) {
 function modify_lsp_group($db,$abnahme,$id) {
   global $error_output;
   $query="UPDATE lsp_gruppe SET startnummer=".((int)$_POST['startnummer']).", name='".$_POST['name']."', bundesland=".((int)$_POST['bundesland']).", bezirk='".$_POST['bezirk']."', kreis='".$_POST['kreis']."', ort='".$_POST['ort']."' WHERE abnahme='".$abnahme."' AND id='".$id."'";
-//  echo $query;
   if (!(trim($_POST['name'])=='') && !(trim($_POST['bezirk'])=='') && !(trim($_POST['kreis'])=='') && !(trim($_POST['ort'])=='')) {
     if (!($db->query($query) === TRUE)) {
       $error_output="(".__FUNCTION__.") Datenbankfehler: " . $db->error;
@@ -410,10 +409,8 @@ function modify_lsp_group($db,$abnahme,$id) {
 
 function form_edit_lsp_group_members($db,$abnahme,$gid) {
   $lsp=get_lsp($db,$abnahme);
-//  print_r($lsp);
   $grp=get_group($db,$abnahme,$gid);
   $lspmembers=get_lsp_group_members($db,$abnahme,$gid);
-//  print_r($lspmembers);
   $blr=get_bundeslaender($db);
   $groupsize=9;
   $spare=2;
@@ -441,7 +438,11 @@ function form_edit_lsp_group_members($db,$abnahme,$gid) {
           <td><input class="'.get_cls("dt",date('Y-m-d',strtotime($lspmbr['geburtstag'])),$lsp['datum']).'" type="date" name="geburt[]" value="'.date('Y-m-d',strtotime($lspmbr['geburtstag'])).'"></td>
           <td><input class="et" type="date" name="eintritt[]" value="'.date('Y-m-d',strtotime($lspmbr['eintritt'])).'"></td>
           <td><input class="'.get_cls("aw",$lspmbr['ausweisnr'],null).'" type="text" name="ausweis[]" size="6" minlength="6" maxlength="6" value="'.$lspmbr['ausweisnr'].'"></td>
-          <td><select class="gs" name="geschlecht[]"><option value="m">M&auml;nnlich</option><option value="w">Weiblich</option></select></td>
+          <td><select class="gs" name="geschlecht[]"><option value="m"';
+          if ($lspmbr['geschlecht']=='m') $output.=' selected';
+          $output.='>M&auml;nnlich</option><option value="w"';
+          if ($lspmbr['geschlecht']=='w') $output.=' selected';
+          $output.= '>Weiblich</option></select></td>
           <td><input class="al" type="checkbox" name="auslaender[]"';
           if ($lspmbr['auslaender']>0) $output.=' checked';
           $output.='></td>

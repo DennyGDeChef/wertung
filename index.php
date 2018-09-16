@@ -1,6 +1,6 @@
 <?php
 
-  require('db_secrets.php');
+  require('db_secrets.local.php');
   $db = new mysqli($dbhost,$dbuser,$dbpass,$dbname);
   $db->set_charset('utf8');
   if ($db->connect_errno) {
@@ -70,7 +70,10 @@
       modify_lsp_group($db,$_SESSION['LSP'],$_POST['id']);
       break;
     case 'modifylspgrpmembers':
-      modify_lsp_group_members($db,$_SESSION['LSP'],$_POST['id']);
+      $grp=$_POST['id'];
+      modify_lsp_group_members($db,$_SESSION['LSP'],$grp);
+      $_POST['do']='editlspgrpmembers';
+      $_POST['gruppe']=$grp;
       break;
     case 'removelspgrp':
       remove_lsp_group($db,$_SESSION['LSP'],$_POST['removeid']);

@@ -44,7 +44,7 @@
     background-color: #eee;
     border-radius: 0.7em;
     border: 1px solid;
-    width: 800px;
+    width: 1000px;
   }
 
   table.wertungskopf {
@@ -127,6 +127,10 @@
 
   table.gettoken {
     width: 280px;
+  }
+
+  #ratelspgrp table tr td h2 {
+    margin: 0px;
   }
 }
 
