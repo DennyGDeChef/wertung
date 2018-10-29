@@ -1,24 +1,35 @@
 <?php
 
-function form_create_leistungsspange($db) {
-  if ($blr=get_bundeslaender($db)) {
-
-  $output='<h1>Leistungsspangenabnahme anlegen</h1>
+function form_create_leistungsspange($db,$land=01) {
+  $blr=get_bundeslaender($db);
+  $lkr=get_landkreise_bundesland($db,$land);
+  $output='<script>';
+  $output.=js_post_function();
+  $output.='</script>';
+  $output.='<h1>Leistungsspangenabnahme anlegen</h1>
   <form action="index.php" method="POST" id="newlsp">
     <input type="hidden" name="do" value="createlsp">
     <table>
       <tr><th colspan="4">Abnahme</th></tr>
       <tr><th>Datum</th><th>Land</th><th>Kreis</th><th>Ort</th></tr>
       <tr><td><input type="date" name="datum" value="'.date('d.m.Y').'"></td>
-        <td><select name="bundesland">';
+        <td><select id="bundesland" name="bundesland" onChange="post('."'".'index.php'."'".',{screen:'."'".'addlsp'."'".',bundesland:this.value});">';
         foreach ($blr as $bl) {
-          $output.='<option value="'.$bl['id'].'">';
+          $output.='<option value="'.$bl['id'].'"';
+		  if ($bl['id']==$land) $output.=' selected';
+		  $output.='>';
           $output.=$bl['name'].'</option>';
           
         }
   $output.='
         </select></td>
-        <td><input type="text" name="kreis"></td>
+        <td><select name="kreis">';
+        foreach ($lkr as $lk) {
+          $output.='<option value="'.$lk['id'].'">';
+          $output.=$lk['name'].'</option>';
+          
+        }
+		$output.='</select></td>
         <td><input type="text" name="ort"></td>
       </tr>
       <tr><th colspan="4">Abnahmeberechtigter</th></tr>
@@ -38,10 +49,7 @@ function form_create_leistungsspange($db) {
     </table>
   </form>
   ';
-
   return $output;
-  }
-  return false;
 }
 
 function create_lsp($db,$datum,$land,$kreis,$ort,$ab_name,$ab_vorname,$ab_ort,$stempel,$mzf) {
@@ -55,7 +63,6 @@ function create_lsp($db,$datum,$land,$kreis,$ort,$ab_name,$ab_vorname,$ab_ort,$s
     return false;
   }
   $error_output="Das hat nicht geklappt, weil nicht alle Felder korrekt ausgef&uuml;llt wurden.";
-  $error_output.=print_r($_POST);
   return false;
 }
 
@@ -66,7 +73,8 @@ function new_lsp($db,$datum,$land,$kreis,$ort,$ab_name,$ab_vorname,$ab_ort,$stem
     $error_output="Fehler beim Generieren der Veranstaltungs ID: ".$id;
     return false;
   }
-  if ($result = $db->query("INSERT leistungsspange SET id='".$id."', bundesland='".$land."', mzf='".$mzf."', stempel='".$stempel."', datum='".$datum."', ort='".$ort."', kreis='".$kreis."', ab_name='".$ab_name."', ab_vorname='".$ab_vorname."', ab_ort='".$ab_ort."'")) {
+  $query="INSERT leistungsspange SET id='".$id."', bundesland='".$land."', mzf='".$mzf."', stempel='".$stempel."', datum='".$datum."', ort='".$ort."', kreis='".$kreis."', ab_name='".$ab_name."', ab_vorname='".$ab_vorname."', ab_ort='".$ab_ort."', besitzer=".$_SESSION['_BENUTZER'];
+  if ($result = $db->query($query)) {
     return $id;
   }
   $error_output="(".__FUNCTION__.") Datenbankfehler: " . $db->error;
@@ -91,31 +99,49 @@ function select_lsp($lsp) {
 
 function get_lsps($db) {
   global $error_output;
-  if ($result = $db->query("SELECT leistungsspange.*,bundesland.name as land FROM leistungsspange LEFT JOIN bundesland on leistungsspange.bundesland=bundesland.id ORDER BY leistungsspange.datum DESC")) {
-    $output=array();
-    while ($line = $result->fetch_assoc()) {
-      array_push($output,$line);
+  if (isset($_SESSION['_BENUTZER'])) {
+	if (in_array(6,$_SESSION['_RECHTE'])) {
+	  $ben=get_benutzer($db,$_SESSION['_BENUTZER']);
+	  $bld=get_bundesland_from_landkreis($db,$ben['landkreis']);
+	  $lkr=get_landkreise_bundesland($db,$bld['id']);
+	  $lkr_id_list=array();
+	  foreach ($lkr as $kr) array_push($lkr_id_list,$kr['id']);
+	}
+
+    $query="SELECT leistungsspange.*,bundesland.name as land, landkreis.name as kreis FROM leistungsspange LEFT JOIN bundesland on leistungsspange.bundesland=bundesland.id LEFT JOIN landkreis on leistungsspange.kreis=landkreis.id WHERE besitzer=".$_SESSION['_BENUTZER'];
+    if (in_array(6,$_SESSION['_RECHTE'])) $query.=" OR leistungsspange.kreis IN (".implode(',',$lkr_id_list).")";
+    $query.=" ORDER BY leistungsspange.datum DESC";
+    if ($result = $db->query($query)) {
+      $output=array();
+      while ($line = $result->fetch_assoc()) {
+        array_push($output,$line);
+      }
+      return $output;
     }
-    return $output;
+    return "(".__FUNCTION__.") Datenbankfehler: " . $db->error;
   }
-  return "(".__FUNCTION__.") Datenbankfehler: " . $db->error;
+  else return false;
 }
 
-function get_lsp($db,$id) {
-  $query="SELECT leistungsspange.*,bundesland.name as land FROM leistungsspange LEFT JOIN bundesland on leistungsspange.bundesland=bundesland.id WHERE leistungsspange.id='".$id."'";
-//  echo $query;
+function get_lsp($db,$lsp) {
+  if (isset($_SESSION['_BENUTZER'])) {
+    $query="SELECT leistungsspange.*,bundesland.name as land, landkreis.name as kreis  FROM leistungsspange LEFT JOIN bundesland on leistungsspange.bundesland=bundesland.id LEFT JOIN landkreis on leistungsspange.kreis=landkreis.id WHERE leistungsspange.id='".$lsp."'";
+	if (!in_array(6,$_SESSION['_RECHTE'])) {
+      $query.=" AND besitzer=".$_SESSION['_BENUTZER'];
+	}
   if ($result = $db->query($query)) {
     while ($line = $result->fetch_assoc()) {
-//      print_r($line);
       return $line;
     }
     return false;
   }
   return false;
+  }
+  return false;
 }
 
-function get_groups($db,$id,$sort) {
-  $query="SELECT * FROM lsp_gruppe WHERE abnahme='".$id."'";
+function get_lsp_groups($db,$abnahme,$sort) {
+  $query="SELECT * FROM lsp_gruppe WHERE abnahme='".$abnahme."'";
   if ($result = $db->query($query)) {
     $output=array();
     while($line = $result->fetch_assoc()){
@@ -126,7 +152,16 @@ function get_groups($db,$id,$sort) {
   return false;
 }
 
-function get_groups_by_token($db,$token,$sort) {
+function get_lsp_group_count($db,$abnahme) {
+  $query="SELECT count(id) AS count FROM lsp_gruppe WHERE abnahme='".$abnahme."'";
+  if ($result = $db->query($query)) {
+    $output=$result->fetch_array()[0];
+    return $output;
+  }
+  return false;
+}
+
+function get_lsp_groups_by_token($db,$token,$sort) {
   $query="SELECT * FROM lsp_gruppe WHERE token='".$token."'";
   if ($result = $db->query($query)) {
     $output=array();
@@ -139,8 +174,8 @@ function get_groups_by_token($db,$token,$sort) {
 }
 
 
-function get_group($db,$abnahme,$id) {
-  $query="SELECT * FROM lsp_gruppe WHERE abnahme='".$abnahme."' AND id='".$id."'";
+function get_lsp_group($db,$abnahme,$grp) {
+  $query="SELECT * FROM lsp_gruppe WHERE abnahme='".$abnahme."' AND id='".$grp."'";
   if ($result = $db->query($query)) {
     while ($line = $result->fetch_assoc()){
       return $line;
@@ -151,7 +186,6 @@ function get_group($db,$abnahme,$id) {
 }
 
 function get_lsp_tokens($db,$abnahme) {
-//  $query="SELECT * FROM lsp_token WHERE abnahme='".$abnahme."'";
   $query="SELECT t.*, count(g.id) as mannschaften FROM lsp_token AS t LEFT JOIN lsp_gruppe AS g ON t.id=g.token WHERE t.abnahme='".$abnahme."' group by t.id";
   if ($result = $db->query($query)) {
     $output=array();
@@ -183,6 +217,18 @@ function get_lsp_id_token($db,$abnahme,$id) {
     return false;
   }
   else return false;
+}
+
+function get_lsp_candidate_count($db,$abnahme) {
+  $query="SELECT g.id as grp,sum(if(t.geschlecht='w',1,0)) as bewerber_w, sum(if(t.geschlecht='m',1,0)) as bewerber_m FROM `lsp_gruppe` AS g JOIN lsp_teilnehmer AS t ON g.abnahme=t.abnahme AND g.id = t.gruppe WHERE g.abnahme='18.0601.009.0915' AND t.bewerber='X' GROUP BY g.id";
+  if ($result = $db->query($query)) {
+    $output=array();
+    while($line = $result->fetch_assoc()){
+      $output[(int)$line['grp']]=array('w'=>$line['bewerber_w'],'m'=>$line['bewerber_m']);
+    }
+    return $output;
+  }
+  return false;
 }
 
 function getNewToken($length){
@@ -286,13 +332,10 @@ function get_cls($field,$value,$option) {
 
 function form_show_lsp_groups($db,$lspid,$sort) {
   global $error_output;
-//  print_r($_POST);
-//  print_r($_SESSION);
-//  echo $lspid;
   if ($lsp=get_lsp($db,$lspid)) {
     $output='<h1>Leistungsspange der DJF</h1>';
     $output.='<h2>'.date('d.m.Y',strtotime($lsp['datum'])).' '.$lsp['ort'].', '.$lsp['kreis'].' ('.$lsp['land'].')</h2>';
-    if ($grps=get_groups($db,$lspid,$sort)) {
+    if ($grps=get_lsp_groups($db,$lspid,$sort)) {
       $output.='<table>
         <tr><th><a href="index.php?sort=startnummer">Start Nr</a></th><th>Name</th><th>Land</th><th>Bezirk</th><th>Kreis</th><th>Ort</th></tr>';
       foreach ($grps as $grp) {
@@ -366,7 +409,7 @@ function insert_lsp_group($db) {
 }
 
 function form_edit_lsp_group($db,$abnahme,$gid) {
-  $lsp=get_group($db,$abnahme,$gid);
+  $lsp=get_lsp_group($db,$abnahme,$gid);
   $blr=get_bundeslaender($db);
   $output='<h1>'.$lsp['name'].' editieren</h1>
   <form action="index.php" method="POST" id="editgrp">
@@ -409,7 +452,7 @@ function modify_lsp_group($db,$abnahme,$id) {
 
 function form_edit_lsp_group_members($db,$abnahme,$gid) {
   $lsp=get_lsp($db,$abnahme);
-  $grp=get_group($db,$abnahme,$gid);
+  $grp=get_lsp_group($db,$abnahme,$gid);
   $lspmembers=get_lsp_group_members($db,$abnahme,$gid);
   $blr=get_bundeslaender($db);
   $groupsize=9;
@@ -502,7 +545,7 @@ function get_lsp_group_members($db,$abnahme,$gid) {
 function modify_lsp_group_members($db,$abnahme,$gid) {
   global $error_output;
   $lsp=get_lsp($db,$abnahme);
-  $grp=get_group($db,$abnahme,$gid);
+  $grp=get_lsp_group($db,$abnahme,$gid);
   $blr=get_bundeslaender($db);
   $groupsize=9;
   $spare=2;
@@ -619,7 +662,7 @@ function get_points_relay($sekunden) {
 
 function form_rate_lsp_group($db,$abnahme,$gid) {
   $lsp=get_lsp($db,$abnahme);
-  $grp=get_group($db,$abnahme,$gid);
+  $grp=get_lsp_group($db,$abnahme,$gid);
   $lsp_rating=get_lsp_rating($db,$abnahme,$gid);
   $output.= '<h1>Wertung '.$grp['name'].'</h1>
     <form action="index.php" method="POST" id="ratelspgrp">
@@ -758,7 +801,7 @@ function form_rate_lsp_group($db,$abnahme,$gid) {
 function modify_lsp_rating($db,$abnahme) {
   global $error_output;
   $lsp=get_lsp($db,$abnahme);
-  $grp=get_group($db,$abnahme,$gid);
+  $grp=get_lsp_group($db,$abnahme,$gid);
   if ($_POST['neu']=='on') {
     $query="INSERT lsp_wertung SET abnahme='".$abnahme."', gruppe='".$_POST['gruppe']."', ";
   }
@@ -804,7 +847,6 @@ function button_show_lsp_results() {
 
 function get_lsp_resultlist($db,$abnahme) {
   $query="SELECT * FROM lsp_wertung JOIN lsp_gruppe ON lsp_wertung.abnahme=lsp_gruppe.abnahme AND lsp_wertung.gruppe=lsp_gruppe.id WHERE lsp_gruppe.abnahme='$abnahme' ORDER BY lsp_gruppe.startnummer";
-//  echo $query;
   if (!($result=$db->query($query))) {
     return false;
   }
@@ -813,6 +855,35 @@ function get_lsp_resultlist($db,$abnahme) {
     array_push($list,$line);
   }
   return $list;
+}
+
+function get_lsp_group_gesamteindruck($item) {
+  return round((
+                    ($item['schnelligkeit_gueltig']>1?$item['schnelligkeit_eindruck2']:$item['schnelligkeit_eindruck']) +
+                    ($item['kugel_gueltig']>1?$item['kugel_eindruck2']:$item['kugel_eindruck']) +
+                    ($item['staffel_gueltig']>1?$item['staffel_eindruck2']:$item['staffel_eindruck']) +
+                    ($item['loeschangriff_eindruck']) +
+                    ($item['fragen_eindruck']))
+                    /5);
+}
+
+function get_lsp_group_gesamtpunkte($item) {
+  $gesamteindruck = get_lsp_group_gesamteindruck($item);
+  if ((($item['schnelligkeit_gueltig']>1?get_points_fastness($item['schnelligkeit_zeit2']):get_points_fastness($item['schnelligkeit_zeit'])) *
+                  ($item['kugel_gueltig']>1?get_points_shot_put($item['kugel_weite2']):get_points_shot_put($item['kugel_weite'])) *
+                  ($item['staffel_gueltig']>1?get_points_relay($item['staffel_zeit2']):get_points_relay($item['staffel_zeit'])) *
+                  $item['loeschangriff_punkte'] *
+                  $item['fragen_punkte'] *
+                  $gesamteindruck) > 0)
+    {
+      $gesamtpunkte = ($item['schnelligkeit_gueltig']>1?get_points_fastness($item['schnelligkeit_zeit2']):get_points_fastness($item['schnelligkeit_zeit'])) +
+                  ($item['kugel_gueltig']>1?get_points_shot_put($item['kugel_weite2']):get_points_shot_put($item['kugel_weite'])) +
+                  ($item['staffel_gueltig']>1?get_points_relay($item['staffel_zeit2']):get_points_relay($item['staffel_zeit'])) +
+                  $item['loeschangriff_punkte'] +
+                  $item['fragen_punkte'] +
+                  $gesamteindruck;
+    } else $gesamtpunkte=0;
+  return $gesamtpunkte;
 }
 
 function show_lsp_results($db,$abnahme) {
@@ -827,19 +898,9 @@ function show_lsp_results($db,$abnahme) {
     $item['schnelligkeit_zeit2']=strtotime("1970-01-01 ".$item['schnelligkeit_zeit2']." UTC");
     $item['staffel_zeit']=strtotime("1970-01-01 ".$item['staffel_zeit']." UTC");
     $item['staffel_zeit2']=strtotime("1970-01-01 ".$item['staffel_zeit2']." UTC");
-    $gesamteindruck = round((
-                    ($item['schnelligkeit_gueltig']>1?$item['schnelligkeit_eindruck2']:$item['schnelligkeit_eindruck']) +
-                    ($item['kugel_gueltig']>1?$item['kugel_eindruck2']:$item['kugel_eindruck']) +
-                    ($item['staffel_gueltig']>1?$item['staffel_eindruck2']:$item['staffel_eindruck']) +
-                    ($item['loeschangriff_eindruck']) +
-                    ($item['fragen_eindruck']))
-                    /5);
-    $gesamtpunkte = ($item['schnelligkeit_gueltig']>1?get_points_fastness($item['schnelligkeit_zeit2']):get_points_fastness($item['schnelligkeit_zeit'])) +
-                  ($item['kugel_gueltig']>1?get_points_shot_put($item['kugel_weite2']):get_points_shot_put($item['kugel_weite'])) +
-                  ($item['staffel_gueltig']>1?get_points_relay($item['staffel_zeit2']):get_points_relay($item['staffel_zeit'])) +
-                  $item['loeschangriff_punkte'] +
-                  $item['fragen_punkte'] +
-                  $gesamteindruck;
+
+    $gesamteindruck = get_lsp_group_gesamteindruck($item);
+    $gesamtpunkte = get_lsp_group_gesamtpunkte($item);
 
     $output.='<tr>
               <td>'.$item['startnummer'].'</td>
@@ -875,15 +936,12 @@ function show_lsp_results($db,$abnahme) {
               </tr>';
   } 
   $output.='</table>';
-//  $output.='<pre>';
-//  $output.=print_r($list,1);
-//  $output.="</pre>";
   return $output;
 }
 
 function show_lsp_rating($db,$abnahme,$group) {
   $lsp=get_lsp($db,$abnahme);
-  $grp=get_group($db,$abnahme,$group);
+  $grp=get_lsp_group($db,$abnahme,$group);
   $rtg=get_lsp_rating($db,$abnahme,$group);
   $mbrs=get_lsp_group_members($db,$abnahme,$group);
 
@@ -892,20 +950,8 @@ function show_lsp_rating($db,$abnahme,$group) {
   $rtg['staffel_zeit']=strtotime("1970-01-01 ".$rtg['staffel_zeit']." UTC");
   $rtg['staffel_zeit2']=strtotime("1970-01-01 ".$rtg['staffel_zeit2']." UTC");
 
-  $summeeindruck = round((
-                    ($rtg['schnelligkeit_gueltig']>1?$rtg['schnelligkeit_eindruck2']:$rtg['schnelligkeit_eindruck']) +
-                    ($rtg['kugel_gueltig']>1?$rtg['kugel_eindruck2']:$rtg['kugel_eindruck']) +
-                    ($rtg['staffel_gueltig']>1?$rtg['staffel_eindruck2']:$rtg['staffel_eindruck']) +
-                    ($rtg['loeschangriff_eindruck']) +
-                    ($rtg['fragen_eindruck']))
-                    );
-  $gesamteindruck = round($summeeindruck/5);
-  $gesamtpunkte = ($rtg['schnelligkeit_gueltig']>1?get_points_fastness($rtg['schnelligkeit_zeit2']):get_points_fastness($rtg['schnelligkeit_zeit'])) +
-                  ($rtg['kugel_gueltig']>1?get_points_shot_put($rtg['kugel_weite2']):get_points_shot_put($rtg['kugel_weite'])) +
-                  ($rtg['staffel_gueltig']>1?get_points_relay($rtg['staffel_zeit2']):get_points_relay($rtg['staffel_zeit'])) +
-                  $rtg['loeschangriff_punkte'] +
-                  $rtg['fragen_punkte'] +
-                  $gesamteindruck;
+  $gesamteindruck = get_lsp_group_gesamteindruck($rtg);
+  $gesamtpunkte = get_lsp_group_gesamtpunkte($rtg);
 
   $output='<table class="wertungskopf">';
   $output.='<tr><td>Start-Nr: '.$grp['startnummer'].'</td>
@@ -952,16 +998,6 @@ function show_lsp_rating($db,$abnahme,$group) {
   $output.='<tr><td colspan="4" rowspan="2">Ich versichere, die einzelnen &Uuml;bungen nach den Richtlinien der Deutschen Jugendfeuerwehr durchgef&uuml;hrt zu haben. Abnahmeberechtigter der Deutschen Jugendfeuerwehr:</td><th>'.$gesamtpunkte.'</th><th colspan="2">Gesamtpunkte</th></tr>';
   $output.='<tr><th colspan="2">'.$lsp['ab_name'].'</th></tr>';
   $output.='</table>';
-/*
-  $output.='<pre>';
-
-  $output.=print_r($lsp,1);
-
-  $output.=print_r($grp,1);
-  $output.=print_r($rtg,1);
-  $output.=print_r($mbrs,1);
-  $output.='</pre>';
-*/
   return $output;
 }
 
@@ -1386,7 +1422,7 @@ function form_show_lsp_token_groups($db,$token,$sort) {
   if ($lsp=get_lsp($db,$token['abnahme'])) {
     $output='<h1>Leistungsspange der DJF</h1>';
     $output.='<h2>'.date('d.m.Y',strtotime($lsp['datum'])).' '.$lsp['ort'].', '.$lsp['kreis'].' ('.$lsp['land'].')</h2>';
-    if ($grps=get_groups_by_token($db,$token['id'],$sort)) {
+    if ($grps=get_lsp_groups_by_token($db,$token['id'],$sort)) {
       $output.='<table>
         <tr><th><a href="token.php?sort=startnummer">Start Nr</a></th><th>Name</th><th>Land</th><th>Bezirk</th><th>Kreis</th><th>Ort</th></tr>';
       foreach ($grps as $grp) {
@@ -1416,7 +1452,7 @@ function button_lsp_token_logout() {
 
 function form_edit_lsp_token_group($db,$token,$gid) {
   $token=get_lsp_token($db,$token);
-  $lsp=get_group($db,$token['abnahme'],$gid);
+  $lsp=get_lsp_group($db,$token['abnahme'],$gid);
   $blr=get_bundeslaender($db);
   $output='<h1>'.$lsp['name'].' editieren</h1>
   <form action="token.php" method="POST" id="editgrp">
@@ -1468,7 +1504,7 @@ function button_back_token() {
 function form_edit_lsp_token_group_members($db,$token,$gid) {
   $token=get_lsp_token($db,$token);
   $lsp=get_lsp($db,$token['abnahme']);
-  $grp=get_group($db,$token['abnahme'],$gid);
+  $grp=get_lsp_group($db,$token['abnahme'],$gid);
   $lspmembers=get_lsp_group_members($db,$token['abnahme'],$gid);
   $blr=get_bundeslaender($db);
   $groupsize=9;
@@ -1624,7 +1660,7 @@ function modify_lsp_token_group_members($db,$token,$gid) {
   global $error_output;
   $token=get_lsp_token($db,$token);
   $lsp=get_lsp($db,$token['abnahme']);
-  $grp=get_group($db,$token['abnahme'],$gid);
+  $grp=get_lsp_group($db,$token['abnahme'],$gid);
   $blr=get_bundeslaender($db);
   $groupsize=9;
   $spare=2;
@@ -1671,5 +1707,43 @@ function modify_lsp_token_group_members($db,$token,$gid) {
   unset($_POST);
 }
 
+function button_show_lsp_statistics() {
+  $output='<form action="index.php" method="POST" id="showlspstatistics">
+  <input type="hidden" name="do" value="showlspstatistics">
+  <input class="menubutton" type="submit" value="Statistik"></form>';
+  return $output;
+}
+
+function show_lsp_statistics($db,$abnahme) {
+  $lsp=get_lsp($db,$abnahme);
+  $count=get_lsp_candidate_count($db,$abnahme);
+  $list=get_lsp_resultlist($db,$abnahme);
+  $gesamt=array('w'=>0,'m'=>0);
+  $erfolg=array('w'=>0,'m'=>0);
+  foreach($list as $item) {
+    $item['schnelligkeit_zeit']=strtotime("1970-01-01 ".$item['schnelligkeit_zeit']." UTC");
+    $item['schnelligkeit_zeit2']=strtotime("1970-01-01 ".$item['schnelligkeit_zeit2']." UTC");
+    $item['staffel_zeit']=strtotime("1970-01-01 ".$item['staffel_zeit']." UTC");
+    $item['staffel_zeit2']=strtotime("1970-01-01 ".$item['staffel_zeit2']." UTC");
+    $gesamt['w']+=$count[$item['gruppe']]['w'];
+    $gesamt['m']+=$count[$item['gruppe']]['m'];
+    if (get_lsp_group_gesamtpunkte($item) > 10) {
+      $erfolg['w']+=$count[$item['gruppe']]['w'];
+      $erfolg['m']+=$count[$item['gruppe']]['m'];
+    }
+  }
+//  print_r($gesamt);
+//  print_r($erfolg);
+//  print_r($list);
+//  print_r($count);
+  $output='<h1>Statistik</h1>';
+  $output.='<table>';
+  $output.='<tr><th>Gruppen</th><td>'.get_lsp_group_count($db,$abnahme).'</td></tr>';
+  $output.='<tr><th>&nbsp;</th><th>weiblich</th><th>m&auml;nnlich</th><th>gesamt</th></tr>';
+  $output.='<tr><th>Bewerber</th><td>'.$gesamt['w'].'</td><td>'.$gesamt['m'].'</td><td>'.($gesamt['w']+$gesamt['m']).'</td></tr>';
+  $output.='<tr><th>erfolgreich</th><td>'.$erfolg['w'].'</td><td>'.$erfolg['m'].'</td><td>'.($erfolg['w']+$erfolg['m']).'</td></tr>';
+  $output.='</table>';
+  return $output;  
+}
 
 ?>

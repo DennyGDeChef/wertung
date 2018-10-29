@@ -11,6 +11,8 @@
   session_start();
 
   require('general_functions.php');
+  require('config.php');
+  require('benutzer.php');
   require('wb_functions.php');
   require('lsp_functions.php');
 
@@ -32,6 +34,30 @@
     }
   }
 
+  switch ($_POST['benutzer']) {
+    case 'login':
+      benutzer_login($db,$_POST['benutzername'],$_POST['passwort']);
+      unset($_POST['passwort']);
+      unset($_POST['benutzer']);
+      break;
+    case 'logout':
+      benutzer_logout($db);
+      unset ($_POST['benutzer']);
+      break;
+	case 'neuespw':
+	  passwort_aendern($db,$_POST['alt'],$_POST['neu1'],$_POST['neu2']);
+	  unset($_POST['alt']);
+	  unset($_POST['neu1']);
+	  unset($_POST['neu2']);
+	  unset($_POST['benutzer']);
+	  break;
+	case 'neuerbenutzer':
+	  neuer_benutzer($db,$_POST['benutzername'],$_POST['email'],$_POST['vorname'],$_POST['nachname'],$_POST['pw1'], $_POST['pw2'],$_POST['kreis']);
+	  break;
+  }
+
+  if (isset($_SESSION['_BENUTZER']) && $_SESSION['_BENUTZER'] > 0) {
+  $_SESSION['_RECHTE']=get_benutzer_rechte($db,$_SESSION['_BENUTZER']);
   switch ($_POST['do']) {
     case 'selectwb':
       select_competition($_POST['wettbewerb']);
@@ -102,37 +128,86 @@
       $_POST['do']='showlsptoken';
       break;
   }
-
+  }
+  else {
+  }
 /*
 
   OUTPUT CREATION
 
 */
+  //print_r($_POST);
+  //print_r($_SESSION['_RECHTE']);
+  //print_r($_SESSION['_BENUTZER']);
+
 
   html_head();
   echo error_output();
+  if (isset($_SESSION['_BENUTZER']) && $_SESSION['_BENUTZER']>0) {
+    echo '<div class="menu"><table><tr>';
+	echo '<td>'.button_benutzer_logout().'</td>';
+	echo '<td>'.button_benutzer_passwort_aendern().'</td>';
+    if (in_array(1,$_SESSION['_RECHTE'])) echo '<td>'.button_benutzer_anlegen().'</td>';
+    if (in_array(4,$_SESSION['_RECHTE'])) echo '<td>'.button_benutzer_bearbeiten().'</td>';
+    if (in_array(7,$_SESSION['_RECHTE'])) echo '<td>'.button_rolle_bearbeiten().'</td>';
+    echo '</tr></table></div>';
+  }
+  if (isset($_POST['benutzer']) && isset($_SESSION['_BENUTZER']) && $_SESSION['_BENUTZER']>0) {
+    switch ($_POST['benutzer']) {
+      case 'pwaendern':
+        echo form_benutzer_passwort_aendern();
+        echo button_back();
+      break;
+	  case 'neuenbenutzer':
+	    if (in_array(1,$_SESSION['_RECHTE'])) {
+		  echo form_benutzer_anlegen($db);
+          echo button_back();
+		}
+	  break;
+	  case 'bearbeitebenutzer':
+	    if (in_array(4,$_SESSION['_RECHTE'])) {
+		  echo form_benutzer_bearbeiten($db,$_POST['benutzerid']);
+		  echo button_back();
+	    }
+	  break;
+	  case 'bearbeiterolle':
+	    if (in_array(7,$_SESSION['_RECHTE'])) {
+		  echo form_rolle_bearbeiten($db,$_POST['rolleid']);
+		  echo button_back();
+	    }
+	  }
+  }
   if (!isset($_SESSION['WB'])) {
-    if (isset($_POST['screen'])) {
+    if (isset($_POST['screen']) && isset($_SESSION['_BENUTZER']) && $_SESSION['_BENUTZER']>0) {
       switch ($_POST['screen']) {
         case 'addcomp':
-          echo form_create_competition($db);
-          echo button_back();
+		  if (in_array(2,$_SESSION['_RECHTE'])) {
+            echo form_create_competition($db);
+            echo button_back();
+		  }
           break;
         case 'addlsp':
-          echo form_create_leistungsspange($db);
-          echo button_back();
+		  if (in_array(3,$_SESSION['_RECHTE'])) {
+            echo form_create_leistungsspange($db,$_POST['bundesland']);
+            echo button_back();
+		  }
           break;
       }
     }
     else {
-      echo form_select_competition($db);
-      echo button_create_competition();
-      echo form_select_lsp($db);
-      echo button_create_leistungsspange();
+      if (isset($_SESSION['_BENUTZER']) && $_SESSION['_BENUTZER']>0) {
+        echo form_select_competition($db);
+        if (in_array(2,$_SESSION['_RECHTE'])) echo button_create_competition();
+        echo form_select_lsp($db);
+        if (in_array(3,$_SESSION['_RECHTE']))echo button_create_leistungsspange();
+      }
+      else {
+        echo form_benutzer_login();
+      }
     }
   }
   else {
-    if ($_SESSION['WB']=='lsp') {
+    if ($_SESSION['WB']=='lsp' && $_SESSION['_BENUTZER']>0) {
       switch ($_POST['do']) {
         case 'addlspgrp':
           echo form_create_lsp_group($db,$_SESSION['LSP']);
@@ -169,6 +244,10 @@
           echo show_lsp_rating($db,$_SESSION['LSP'],$_POST['group']);
           echo button_show_lsp_results();
           break;
+        case 'showlspstatistics':
+          echo show_lsp_statistics($db,$_SESSION['LSP']);
+          echo button_back();
+          break;
         case 'managelspjudges':
           echo manage_lsp_judges($db,$_SESSION['LSP']);
           echo button_back();
@@ -198,12 +277,15 @@
           echo '</td><td>';
           echo button_show_lsp_results();
           echo '</td><td>';
+          echo button_show_lsp_statistics();
+          echo '</td><td>';
           echo button_deselect_lsp();
           echo '</td></tr></table></div>';
           break;
       }
     }
     else {
+      if (isset($_SESSION['_BENUTZER']) && $_SESSION['_BENUTZER']>0) {
     switch ($_POST['do']) {
       case 'editgrp':
         echo form_edit_competition_team($db,$_POST['gruppe']);
@@ -245,6 +327,7 @@
 	echo button_delete_competition();
         echo '</td></tr></table></div>';
       break;
+    }
     }
     }
   }

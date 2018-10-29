@@ -1,7 +1,9 @@
 <?php
 
 function get_competitions($db) {
-  if ($result = $db->query("SELECT wettbewerb.*,wettbewerbsart.name as artname, wettbewerbstyp.name as typname FROM wettbewerb LEFT JOIN wettbewerbsart on wettbewerb.art=wettbewerbsart.id LEFT JOIN wettbewerbstyp on wettbewerb.typ=wettbewerbstyp.id ORDER BY wettbewerb.datum DESC")) {
+  if (isset($_SESSION['_BENUTZER'])) {
+  $query="SELECT wettbewerb.*,bundesland.name as land,landkreis.name as kreis,wettbewerbsart.name as artname, wettbewerbstyp.name as typname FROM wettbewerb LEFT JOIN bundesland on wettbewerb.land=bundesland.id LEFT JOIN landkreis on landkreis.id=wettbewerb.kreis LEFT JOIN wettbewerbsart on wettbewerb.art=wettbewerbsart.id LEFT JOIN wettbewerbstyp on wettbewerb.typ=wettbewerbstyp.id WHERE besitzer=".$_SESSION['_BENUTZER']." ORDER BY wettbewerb.datum DESC";
+  if ($result = $db->query($query)) {
     $output=array(); 
     while ($line = $result->fetch_assoc()){
       array_push($output,$line);
@@ -9,16 +11,21 @@ function get_competitions($db) {
     return $output;
   }
   else return false;
+  }
+  return false;
 }
 
 function get_competition($db,$id) {
-  if ($result = $db->query("SELECT wettbewerb.*,wettbewerbsart.name as artname, wettbewerbstyp.name as typname FROM wettbewerb LEFT JOIN wettbewerbsart on wettbewerb.art=wettbewerbsart.id LEFT JOIN wettbewerbstyp ON wettbewerb.typ=wettbewerbstyp.id WHERE wettbewerb.id=".$id)) {
+  if (isset($_SESSION['_BENUTZER'])) {
+  if ($result = $db->query("SELECT wettbewerb.*,bundesland.name as land,landkreis.name as kreis,wettbewerbsart.name as artname, wettbewerbstyp.name as typname FROM wettbewerb LEFT JOIN bundesland on wettbewerb.land=bundesland.id LEFT JOIN landkreis on landkreis.id=wettbewerb.kreis LEFT JOIN wettbewerbsart on wettbewerb.art=wettbewerbsart.id LEFT JOIN wettbewerbstyp ON wettbewerb.typ=wettbewerbstyp.id WHERE wettbewerb.id=".$id." AND besitzer=".$_SESSION['_BENUTZER'])) {
     while ($line = $result->fetch_assoc()){
       return $line;
     }
     return false;
   }
   else return false;
+  }
+  return false;
 }
 
 function new_competition($db,$datum,$land,$kreis,$ort,$art,$typ) {
