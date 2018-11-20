@@ -182,7 +182,7 @@ function neuer_benutzer($db,$benutzername,$email,$vorname,$nachname,$pw1,$pw2,$k
 	  }
 	  $result->free();
   }
-  $query="INSERT INTO benutzer SET benutzername='".$benutzername."',email='".$email."',name='".$nachname."',vorname='".$vorname."',passwort='".password_hash($pw1,PASSWORD_DEFAULT)."',reg_datum=NOW(),ip='".$_SERVER[REMOTE_ADDR]."',landkreis=".$kreis;
+  $query="INSERT INTO benutzer SET benutzername='".$benutzername."',email='".$email."',name='".$nachname."',vorname='".$vorname."',passwort='".password_hash($pw1,PASSWORD_DEFAULT)."',reg_datum=NOW(),ip='".$_SERVER['REMOTE_ADDR']."',landkreis=".$kreis;
   if ($result=$db->query($query)) {
 	  return true;
   }
@@ -232,8 +232,24 @@ function get_benutzer_rolle($db,$benutzer) {
 		if ($result->num_rows>0) {
 		  return $result->fetch_all(MYSQLI_ASSOC)[0];
 		}
-		else return array(id=>0,rolle=>'keine');
+		else return array('id'=>0,'rolle'=>'keine');
 	}
+	return false;
+}
+
+function set_benutzer_rolle($db,$benutzer,$rolle) {
+	global $error_output;
+	$query="DELETE FROM benutzer_rolle WHERE benutzer=".$benutzer;
+	if (!$result=$db->query($query)) {
+		$error_output.="Beim Entfernen der Rolle ist was schief gelaufen!";
+		return false;
+	}
+	if ($rolle==0) return true;
+	$query="INSERT benutzer_rolle set rolle=".$rolle.", benutzer=".$benutzer;
+	if ($result=$db->query($query)) {
+		return true;
+	}
+	$error_output.="Bei der Rollenänderung ist was schief gelaufen!";
 	return false;
 }
 
@@ -258,16 +274,69 @@ function form_benutzer_bearbeiten($db,$benutzer=0) {
   if ($benutzer!=0) {
 	$daten=get_benutzer($db,$benutzer);
 	$rolle=get_benutzer_rolle($db,$benutzer);
+	$lkr=get_landkreise($db);
+	$rollenliste=get_rollen($db);
+	$output.='<form action="index.php" method="POST" id="aenderebenutzer">';
+	$output.='<input type="hidden" name="benutzer" value="aenderebenutzer">';
+	$output.='<input type="hidden" name="benutzerid" value="'.$benutzer.'">';
 	$output.='<table>';
 	$output.='<tr><th>Benutzername:</th><td>'.$daten['benutzername'].'</td></tr>';
-	$output.='<tr><th>E-Mail:</th><td>'.$daten['email'].'</td></tr>';
-	$output.='<tr><th>Name:</th><td>'.$daten['name'].'</td></tr>';
-	$output.='<tr><th>Vorname:</th><td>'.$daten['vorname'].'</td></tr>';
-	$output.='<tr><th>Landkreis:</th><td>'.$daten['kreisname'].'</td></tr>';
-	$output.='<tr><th>Rolle:</th><td>'.$rolle['rolle'].'</td></tr>';
+	$output.='<tr><th>E-Mail:</th><td><input type="text" size="50" name="email" value="'.$daten['email'].'"></td></tr>';
+	$output.='<tr><th>Name:</th><td><input type="text" name="nachname" value="'.$daten['name'].'"></td></tr>';
+	$output.='<tr><th>Vorname:</th><td><input type="text" name="vorname" value="'.$daten['vorname'].'"></td></tr>';
+	$output.='<tr><th>neues Passwort: </th><td><input type="password" name="pw1"></td></tr>';
+	$output.='<tr><th>neues Passwort: </th><td><input type="password" name="pw2"></td></tr>';
+	$output.='<tr><th>Landkreis:</th><td>';
+	$output.='<select name="kreis">';
+	foreach ($lkr as $lk) {
+		$output.='<option value="'.$lk['id'].'"';
+		if ($lk['id']==$daten['landkreis']) $output.=' selected';
+		$output.='>'.$lk['name'].'</option>';
+	}
+	$output.='</select>';
+	$output.='</td></tr>';
+	$output.='<tr><th>Rolle:</th><td>';
+	$output.='<select name="rolleid">';
+	foreach ($rollenliste as $element) {
+		$output.='<option value="'.$element['id'].'"';
+		if ($element['id']==(int)$rolle['id']) $output.=' selected';
+		$output.='>'.$element['name'].'</option>';
+	}
+	$output.='</select>';
+	$output.='</td></tr>';
+	$output.='<tr><td><input type="submit" name="benutzeraendern" value="Ändern"></td></tr>';
 	$output.='</table>';  
+	$output.='</form>';
   }
   return $output;
+}
+
+function aendere_benutzer($db,$benutzer,$email,$vorname,$nachname,$pw1,$pw2,$kreis,$rolle) {
+	global $error_output;
+	$email=cut_after_spaces($email);
+	$vorname=cut_after_spaces($vorname);
+	$nachname=cut_after_spaces($nachname);
+	$pw1=cut_after_spaces($pw1);
+	if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+		$error_output="Keine g&uuml;ltige E-Mail Adresse!";
+		return false;
+	}
+	if ($pw1 != $pw2) {
+		$error_output='Die Passw&ouml;rter stimmen nicht &uuml;berein!';
+		return false;
+	}
+	if ($pw1 != '') {
+		$pwquery=" passwort='".password_hash($pw1,PASSWORD_DEFAULT)."',";
+	}
+	else {
+		$pwquery="";
+	}
+	$query="UPDATE benutzer SET email='".$email."',".$pwquery." name='".$nachname."', vorname='".$vorname."', landkreis=".$kreis." WHERE id=".$benutzer;
+	if (!$result=$db->query($query)) {
+		$error_output.="Fehler beim Update des Benutzers! ".$db->error;
+	}
+	set_benutzer_rolle($db,$benutzer,$rolle);
+	return true;
 }
 
 function get_rollen($db) {
@@ -309,6 +378,25 @@ function get_rolle_rechte($db,$rolle){
 	return false;
 }
 
+function set_rolle_rechte($db,$rolle,$rechte) {
+	global $error_output;
+	$query="DELETE FROM rolle_recht WHERE rolle=".$rolle;
+	if ($result=$db->query($query)) {
+		if (!in_array(1,$rechte)) return true;
+		$query = "INSERT rolle_recht (rolle,recht) VALUES";
+		foreach ($rechte as $rid=>$flag) {
+			if ($flag) {
+				$query.="($rolle,$rid),";
+			}
+		}
+		$query=rtrim($query,",");
+		if ($result=$db->query($query)) {
+			return true;
+		}
+	}
+	$error_output.="Fehler beim Ändern der Rollenrechte!";
+	return false;
+}
 function form_rolle_bearbeiten($db,$rolle=0) {
   $rollenliste=get_rollen($db);
   $output ='<h1>Rolle bearbeiten</h1>';
@@ -329,14 +417,30 @@ function form_rolle_bearbeiten($db,$rolle=0) {
   $output.='</form>';
   if ($rolle!=0) {
 	  $rrechte=get_rolle_rechte($db,$rolle);
+	  $output.='<form action="index.php" method="POST" id="aendererolle">';
+	  $output.='<input type="hidden" name="benutzer" value="aendererolle">';
+	  $output.='<input type="hidden" name="rolleid" value="'.$rolle.'">';
 	  $output.='<table>';
-	  $output.='<tr><th>Rolle</th><th>'.get_rolle($db,$rolle)['name'].'</th></tr>';
+	  $output.='<tr><th>Rolle</th><th colspan="2">'.get_rolle($db,$rolle)['name'].'</th></tr>';
 	  foreach($rrechte as $key=>$value) {
-		  $output.='<tr><th>'.$value['name'].'</td><td>'.($value['recht']?'Ja':'Nein').'</td></tr>';
+		  $output.='<tr><th>'.$value['name'].'</td>';
+	  $output.='<td>Ja <input type="radio" name="recht['.$key.']" value="1"'.($value['recht']?' checked':'').'>'.'</td>';
+		  $output.='<td>Nein <input type="radio" name="recht['.$key.']" value="0"'.($value['recht']?'':' checked').'>'.'</td>';
+		  $output.='</tr>';
 	  }
+	  $output.='<tr><td><input type="submit" name="rolleaendern" value="Ändern"></td></tr>';
 	  $output.='</table>';
+	  $output.='</form>';
   }
   return $output;
 }
 
+function aendere_rolle($db,$rolle,$rechte) {
+  global $error_output;
+  if (!is_array($rechte)) {
+	  $error_output="Falsche Parameter beim Ändern der Rolle übergeben!";
+	  return false;
+  }
+  return set_rolle_rechte($db,$rolle,$rechte);
+}
 ?>

@@ -46,13 +46,27 @@
       break;
 	case 'neuespw':
 	  passwort_aendern($db,$_POST['alt'],$_POST['neu1'],$_POST['neu2']);
-	  unset($_POST['alt']);
-	  unset($_POST['neu1']);
-	  unset($_POST['neu2']);
-	  unset($_POST['benutzer']);
+	  unset($_POST['alt'],$_POST['neu1'],$_POST['neu2'],$_POST['benutzer']);
 	  break;
 	case 'neuerbenutzer':
-	  neuer_benutzer($db,$_POST['benutzername'],$_POST['email'],$_POST['vorname'],$_POST['nachname'],$_POST['pw1'], $_POST['pw2'],$_POST['kreis']);
+	  if (in_array(1,$_SESSION['_RECHTE'])) {
+		neuer_benutzer($db,$_POST['benutzername'],$_POST['email'],$_POST['vorname'],$_POST['nachname'],$_POST['pw1'], $_POST['pw2'],$_POST['kreis']);
+	  }
+	  unset($_POST['benutzername'],$_POST['email'],$_POST['vorname'],$_POST['nachname'],$_POST['pw1'],$_POST['pw2'],$_POST['kreis']);
+	  break;
+	case 'aenderebenutzer':
+	  if (in_array(4,$_SESSION['_RECHTE'])) {
+		aendere_benutzer($db,$_POST['benutzerid'],$_POST['email'],$_POST['vorname'],$_POST['nachname'],$_POST['pw1'],$_POST['pw2'],$_POST['kreis'],$_POST['rolleid']);
+	  }
+	  unset($_POST['email'],$_POST['nachname'],$_POST['vorname'],$_POST['kreis'],$_POST['rolleid'],$_POST['pw1'],$_POST['pw2']);
+	  $_POST['benutzer']='bearbeitebenutzer';
+	  break;
+	case 'aendererolle':
+	  if (in_array(7,$_SESSION['_RECHTE'])) {
+		aendere_rolle($db,$_POST['rolleid'],$_POST['recht']);
+	  }
+	  unset($_POST['recht']);
+	  $_POST['benutzer']='bearbeiterolle';
 	  break;
   }
 
