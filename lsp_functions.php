@@ -100,16 +100,16 @@ function select_lsp($lsp) {
 function get_lsps($db) {
   global $error_output;
   if (isset($_SESSION['_BENUTZER'])) {
-	if (in_array(6,$_SESSION['_RECHTE'])) {
+	if (in_array(6,$_SESSION['_RECHTE']) || in_array(9,$_SESSION['_RECHTE'])) {
 	  $ben=get_benutzer($db,$_SESSION['_BENUTZER']);
 	  $bld=get_bundesland_from_landkreis($db,$ben['landkreis']);
 	  $lkr=get_landkreise_bundesland($db,$bld['id']);
 	  $lkr_id_list=array();
 	  foreach ($lkr as $kr) array_push($lkr_id_list,$kr['id']);
 	}
-
     $query="SELECT leistungsspange.*,bundesland.name as land, landkreis.name as kreis FROM leistungsspange LEFT JOIN bundesland on leistungsspange.bundesland=bundesland.id LEFT JOIN landkreis on leistungsspange.kreis=landkreis.id WHERE besitzer=".$_SESSION['_BENUTZER'];
     if (in_array(6,$_SESSION['_RECHTE'])) $query.=" OR leistungsspange.kreis IN (".implode(',',$lkr_id_list).")";
+	  elseif (in_array(9,$_SESSION['_RECHTE'])) $query.=" OR leistungsspange.kreis=".$ben['landkreis'];
     $query.=" ORDER BY leistungsspange.datum DESC";
     if ($result = $db->query($query)) {
       $output=array();
@@ -125,9 +125,13 @@ function get_lsps($db) {
 
 function get_lsp($db,$lsp) {
   if (isset($_SESSION['_BENUTZER'])) {
+	$ben=get_benutzer($db,$_SESSION['_BENUTZER']);
     $query="SELECT leistungsspange.*,bundesland.name as land, landkreis.name as kreis  FROM leistungsspange LEFT JOIN bundesland on leistungsspange.bundesland=bundesland.id LEFT JOIN landkreis on leistungsspange.kreis=landkreis.id WHERE leistungsspange.id='".$lsp."'";
 	if (!in_array(6,$_SESSION['_RECHTE'])) {
-      $query.=" AND besitzer=".$_SESSION['_BENUTZER'];
+	  if (in_array(9,$_SESSION['_RECHTE'])) {
+		$query.= " AND leistungsspange.kreis=".$ben['landkreis'];
+	  }
+	  else $query.=" AND besitzer=".$_SESSION['_BENUTZER'];
 	}
   if ($result = $db->query($query)) {
     while ($line = $result->fetch_assoc()) {

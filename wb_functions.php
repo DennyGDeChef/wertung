@@ -1,36 +1,56 @@
 <?php
 
 function get_competitions($db) {
+  global $error_output;
   if (isset($_SESSION['_BENUTZER'])) {
-  $query="SELECT wettbewerb.*,bundesland.name as land,landkreis.name as kreis,wettbewerbsart.name as artname, wettbewerbstyp.name as typname FROM wettbewerb LEFT JOIN bundesland on wettbewerb.land=bundesland.id LEFT JOIN landkreis on landkreis.id=wettbewerb.kreis LEFT JOIN wettbewerbsart on wettbewerb.art=wettbewerbsart.id LEFT JOIN wettbewerbstyp on wettbewerb.typ=wettbewerbstyp.id WHERE besitzer=".$_SESSION['_BENUTZER']." ORDER BY wettbewerb.datum DESC";
-  if ($result = $db->query($query)) {
-    $output=array(); 
-    while ($line = $result->fetch_assoc()){
-      array_push($output,$line);
+	if (in_array(5,$_SESSION['_RECHTE']) || in_array(8,$_SESSION['_RECHTE'])) {
+	  $ben=get_benutzer($db,$_SESSION['_BENUTZER']);
+	  $bld=get_bundesland_from_landkreis($db,$ben['landkreis']);
+	  $lkr=get_landkreise_bundesland($db,$bld['id']);
+	  $lkr_id_list=array();
+	  foreach ($lkr as $kr) array_push($lkr_id_list,$kr['id']);
+	}
+
+    $query="SELECT wettbewerb.*,bundesland.name as land,landkreis.name as kreis,wettbewerbsart.name as artname, wettbewerbstyp.name as typname FROM wettbewerb LEFT JOIN bundesland on wettbewerb.land=bundesland.id LEFT JOIN landkreis on landkreis.id=wettbewerb.kreis LEFT JOIN wettbewerbsart on wettbewerb.art=wettbewerbsart.id LEFT JOIN wettbewerbstyp on wettbewerb.typ=wettbewerbstyp.id WHERE besitzer=".$_SESSION['_BENUTZER'];
+    if (in_array(5,$_SESSION['_RECHTE'])) $query.=" OR wettbewerb.kreis IN (".implode(',',$lkr_id_list).")";
+	  elseif (in_array(8,$_SESSION['_RECHTE'])) $query.=" OR wettbewerb.kreis=".$ben['landkreis'];
+    $query.=" ORDER BY wettbewerb.datum DESC";
+    if ($result = $db->query($query)) {
+      $output=array(); 
+      while ($line = $result->fetch_assoc()){
+        array_push($output,$line);
+      }
+      return $output;
     }
-    return $output;
-  }
-  else return false;
+    else return false;
   }
   return false;
 }
 
 function get_competition($db,$id) {
   if (isset($_SESSION['_BENUTZER'])) {
-  if ($result = $db->query("SELECT wettbewerb.*,bundesland.name as land,landkreis.name as kreis,wettbewerbsart.name as artname, wettbewerbstyp.name as typname FROM wettbewerb LEFT JOIN bundesland on wettbewerb.land=bundesland.id LEFT JOIN landkreis on landkreis.id=wettbewerb.kreis LEFT JOIN wettbewerbsart on wettbewerb.art=wettbewerbsart.id LEFT JOIN wettbewerbstyp ON wettbewerb.typ=wettbewerbstyp.id WHERE wettbewerb.id=".$id." AND besitzer=".$_SESSION['_BENUTZER'])) {
-    while ($line = $result->fetch_assoc()){
-      return $line;
+    $ben=get_benutzer($db,$_SESSION['_BENUTZER']);
+	$query="SELECT wettbewerb.*,bundesland.name as land,landkreis.name as kreis,wettbewerbsart.name as artname, wettbewerbstyp.name as typname FROM wettbewerb LEFT JOIN bundesland on wettbewerb.land=bundesland.id LEFT JOIN landkreis on landkreis.id=wettbewerb.kreis LEFT JOIN wettbewerbsart on wettbewerb.art=wettbewerbsart.id LEFT JOIN wettbewerbstyp ON wettbewerb.typ=wettbewerbstyp.id WHERE wettbewerb.id=".$id;
+	if (!in_array(5,$_SESSION['_RECHTE'])) {
+	  if (in_array(8,$_SESSION['_RECHTE'])) {
+		$query.= " AND wettbewerb.kreis=".$ben['landkreis'];
+	  }
+	  else $query.=" AND besitzer=".$_SESSION['_BENUTZER'];
+	}
+    if ($result = $db->query($query)) {
+      while ($line = $result->fetch_assoc()){
+        return $line;
+      }
+      return false;
     }
-    return false;
-  }
-  else return false;
+    else return false;
   }
   return false;
 }
 
 function new_competition($db,$datum,$land,$kreis,$ort,$art,$typ) {
   global $error_output;
-  if ($result = $db->query("INSERT wettbewerb SET datum='".$datum."', land='".$land."', kreis='".$kreis."', ort='".$ort."', art=".$art.", typ=".$typ)) {
+  if ($result = $db->query("INSERT wettbewerb SET datum='".$datum."', land='".$land."', kreis='".$kreis."', ort='".$ort."', art=".$art.", typ=".$typ.", besitzer=".$_SESSION['_BENUTZER'])) {
     return true;
   }
   $error_output="(".__FUNCTION__.") Datenbankfehler: " . $db->error;
@@ -105,8 +125,10 @@ function get_teammembers($db,$id) {
 
 function set_teamage($db,$id) {
   global $error_output;
-  $wbk=get_competitionkind($db,get_competition($db,get_team($db,$id)['wettbewerb'])['art']);
-  if ($result = $db->query("SELECT YEAR(CURRENT_DATE())-YEAR(geburt) AS jahre FROM mannschaftsmitglieder WHERE einsatz=1 AND mannschaft=".$id)) {
+  $cmp=get_competition($db,get_team($db,$id)['wettbewerb']);
+  $wbk=get_competitionkind($db,$cmp['art']);
+  $query="SELECT ".date("Y",strtotime($cmp['datum']))."-YEAR(geburt) AS jahre FROM mannschaftsmitglieder WHERE einsatz=1 AND mannschaft=".$id;
+  if ($result = $db->query($query)) {
     $alter=0;
     while ($line = $result->fetch_assoc()) {
       $alter+=$line['jahre'];
@@ -354,26 +376,38 @@ function form_select_competition($db) {
   return false;
 }
 
-function form_create_competition($db) {
+function form_create_competition($db,$land=01) {
   if ($wbtps=get_competitiontypes($db)) {
     if ($wbarts=get_competitionkinds($db)) {
       if ($blr=get_bundeslaender($db)) {
-  $output ='<h1>Wettbewerb anlegen</h1>
+        $lkr=get_landkreise_bundesland($db,$land);
+  $output='<script>';
+  $output.=js_post_function();
+  $output.='</script>';
+  $output.='<h1>Wettbewerb anlegen</h1>
   <form action="index.php" method="POST" id="newwb">
   <input type="hidden" name="do" value="createwb">
   <table>
   <tr><th>Datum</th><th>Land</th><th>Kreis</th><th>Ort</th></tr>
   <tr><td><input type="date" name="datum" value="'.date('d.m.Y').'"></td>
-    <td><select name="land">';
+    <td><select id="bundesland" name="bundesland" onChange="post('."'".'index.php'."'".',{screen:'."'".'addcomp'."'".',bundesland:this.value});">';
         foreach ($blr as $bl) {
-          $output.='<option value="'.$bl['name'].'"';
-          if ($bl['id']==6) $output.=' selected';
+          $output.='<option value="'.$bl['id'].'"';
+          if ($bl['id']==$land) $output.=' selected';
           $output.='>';
           $output.=$bl['name'].'</option>';
         }
         $output.='
         </select></td>
-    <td><input type="text" name="kreis"></td>
+    <td>
+    <select name="kreis">';
+        foreach ($lkr as $lk) {
+          $output.='<option value="'.$lk['id'].'">';
+          $output.=$lk['name'].'</option>';
+          
+        }
+		$output.='</select>
+    </td>
     <td><input type="text" name="ort"></td>
   </tr>
   <tr><th colspan="2">Art</th><th colspan="2">Typ</th></tr>
@@ -920,7 +954,7 @@ function show_team_rating($db,$grp,$rtg) {
     <tr><th>Nr.</th><th>Name</th><th>Vorname</th><th>Geb. Datum</th><th>Alter</th></tr>';
   $gesamtalter=0;
   foreach ($members as $mbr) {
-    $alter=(date('Y')-substr($mbr['geburt'],0,4));
+    $alter=(date('Y',strtotime($wb['datum']))-substr($mbr['geburt'],0,4));
     if ($mbr['einsatz']) $gesamtalter+=$alter;
     if ($mbr['name']=='');
     if ($mbr['name']=='') $geburtstag=''; else $geburtstag=date('d.m.Y',strtotime($mbr['geburt']));

@@ -77,7 +77,7 @@
       select_competition($_POST['wettbewerb']);
       break;
     case 'createwb': 
-      create_competition($db,$_POST['datum'],$_POST['land'],$_POST['kreis'],$_POST['ort'],$_POST['art'],$_POST['typ']);
+      create_competition($db,$_POST['datum'],$_POST['bundesland'],$_POST['kreis'],$_POST['ort'],$_POST['art'],$_POST['typ']);
       break;
     case 'modifygrp':
       modify_team($db,$_POST['id'],$_POST['startnummer'],$_POST['name'],$_POST['typ']);
@@ -196,7 +196,7 @@
       switch ($_POST['screen']) {
         case 'addcomp':
 		  if (in_array(2,$_SESSION['_RECHTE'])) {
-            echo form_create_competition($db);
+            echo form_create_competition($db,$_POST['bundesland']);
             echo button_back();
 		  }
           break;
