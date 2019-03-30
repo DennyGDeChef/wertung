@@ -132,4 +132,24 @@ function get_bundesland_from_landkreis($db,$lkr) {
   else return false;
 }
 
+function download_head($filename,$filetype) {
+  header('Content-Disposition: attachment; filename="'.$filename.'"');
+  header("Content-Type: ".$filetype.";");
+}
+
+function make_csv($array) {
+	for ($i=0;$i<sizeof($array);$i++) {
+		$array[$i]='"'.$array[$i].'"';
+	}
+	$csv=implode(';',$array)."\n";
+	return $csv;
+}
+
+function hmstosec($value) {
+	return strtotime("1970-01-01 ".$value." UTC");
+}
+
+function faketime($value) {
+	return date("i:s:00",strtotime("1970-01-01 ".$value." UTC"));
+}
 ?>

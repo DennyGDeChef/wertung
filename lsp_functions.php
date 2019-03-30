@@ -1750,4 +1750,131 @@ function show_lsp_statistics($db,$abnahme) {
   return $output;  
 }
 
+function button_show_lsp_export() {
+  $output='<form action="index.php" method="POST" id="showlspexport">
+  <input type="hidden" name="do" value="showlspexport">
+  <input class="menubutton" type="submit" value="Export"></form>';
+  return $output;
+}
+
+function show_lsp_export($db,$abnahme) {
+  $output='<h1>Export</h1>';
+  $output.='<h2>F&uuml;r Import in Access</h2>';
+  $output.='<table>';
+  $output.='<tr><th>'.button_lsp_csv_export($abnahme,"Veranstaltung").'</th></tr>';
+  $output.='<tr><th>'.button_lsp_csv_export($abnahme,"Gruppen").'</th></tr>';
+  $output.='<tr><th>'.button_lsp_csv_export($abnahme,"Teilnehmer").'</th></tr>';
+  $output.='</table>';
+  return $output;  
+  }
+
+function button_lsp_csv_export($abnahme,$tabelle) {
+  $output='<form action="export.php" method="POST">
+  <input type="hidden" name="do" value="lspcsvexport">
+  <input type="hidden" name="which" value="'.$abnahme.'">
+  <input type="hidden" name="what" value="'.strtolower($tabelle).'">
+  <input type="submit" value="'.$tabelle.'"></form>';
+  return $output;
+}
+
+function lsp_csv_export($db,$which,$what) {
+  $lsp=get_lsp($db,$which);
+  download_head($what.".txt","text/plain");
+  $output=fopen('php://output','w');
+  switch ($what) {
+	case 'veranstaltung':
+		$export=array($lsp['id'],
+			$lsp['bundesland'],
+			$lsp['stempel'],
+			date("j.n.Y 00:00:00",strtotime($lsp['datum'])),
+			$lsp['ort'],
+			$lsp['kreis'],
+			$lsp['ab_name'],
+			$lsp['ab_vorname'],
+			$lsp['ab_ort'],
+			$lsp['wr1_name'],
+			$lsp['wr1_vorname'],
+			$lsp['wr1_ort'],
+			$lsp['wr2_name'],
+			$lsp['wr2_vorname'],
+			$lsp['wr2_ort'],
+			$lsp['wr3_name'],
+			$lsp['wr3_vorname'],
+			$lsp['wr3_ort'],
+			$lsp['wr4_name'],
+			$lsp['wr4_vorname'],
+			$lsp['wr4_ort'],
+			$lsp['wr5_name'],
+			$lsp['wr5_vorname'],
+			$lsp['wr5_ort'],
+			0
+		);
+		fputs($output,make_csv($export));
+		break;
+	case 'gruppen':
+		$grps=get_lsp_groups($db,$which,"id");
+		foreach ($grps as $grp) {
+			$rtg=get_lsp_rating($db,$which,$grp['id']);
+			$export=array(
+				$grp['abnahme'],
+				$grp['abnahme'].'.'.$grp['id'],
+				$grp['startnummer'],
+				$grp['name'],
+				$grp['bundesland'],
+				$grp['bezirk'],
+				$grp['kreis'],
+				$grp['ort'],
+				hmstosec($rtg['schnelligkeit_zeit']),
+				$rtg['schnelligkeit_eindruck'],
+				($rtg['schnelligkeit_gueltig']==1?-1:0),
+				hmstosec($rtg['schnelligkeit_zeit2']),
+				$rtg['schnelligkeit_eindruck2'],
+				($rtg['schnelligkeit_gueltig']==2?1:0),
+				$rtg['kugel_weite'],
+				$rtg['kugel_eindruck'],
+				($rtg['kugel_gueltig']==1?-1:0),
+				$rtg['kugel_weite2'],
+				$rtg['kugel_eindruck2'],
+				($rtg['kugel_gueltig']==2?1:0),
+				faketime($rtg['staffel_zeit']),
+				$rtg['staffel_eindruck'],
+				($rtg['staffel_gueltig']==1?-1:0),
+				faketime($rtg['staffel_zeit2']),
+				$rtg['staffel_eindruck2'],
+				($rtg['staffel_gueltig']==2?1:0),
+				$rtg['loeschangriff_punkte'],
+				$rtg['loeschangriff_eindruck'],
+				$rtg['fragen_punkte'],
+				$rtg['fragen_eindruck']
+				);
+			fputs($output,make_csv($export));
+		}
+		break;
+	case 'teilnehmer':
+		$grps=get_lsp_groups($db,$which,"id");
+		foreach ($grps as $grp) {
+			$mbrs=get_lsp_group_members($db,$which,$grp['id']);
+			foreach ($mbrs as $mbr) {
+				$export=array(
+					$mbr['abnahme'].".".$mbr['gruppe'],
+					($mbr['position']<10?$mbr['position'][1]:'E'),
+					$mbr['bewerber'],
+					$mbr['name'],
+					$mbr['vorname'],
+					date("j.n.Y 00:00:00",strtotime($mbr['geburtstag'])),
+					date("j.n.Y 00:00:00",strtotime($mbr['eintritt'])),
+					$mbr['ausweisnr'],
+					$mbr['geschlecht'],
+					($mbr['auslaender']?"X":""),
+					$mbr['bundesland']
+				);
+				fputs($output,make_csv($export));
+			}
+		}
+	default:
+		break;
+  }
+  fclose($output);
+}
 ?>
+

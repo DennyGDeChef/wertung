@@ -80,6 +80,7 @@
       create_competition($db,$_POST['datum'],$_POST['bundesland'],$_POST['kreis'],$_POST['ort'],$_POST['art'],$_POST['typ']);
       break;
     case 'modifygrp':
+    case 'modifygrp':
       modify_team($db,$_POST['id'],$_POST['startnummer'],$_POST['name'],$_POST['typ']);
       break;
     case 'modifygrpmembers':
@@ -262,6 +263,10 @@
           echo show_lsp_statistics($db,$_SESSION['LSP']);
           echo button_back();
           break;
+        case 'showlspexport':
+          echo show_lsp_export($db,$_SESSION['LSP']);
+          echo button_back();
+          break;
         case 'managelspjudges':
           echo manage_lsp_judges($db,$_SESSION['LSP']);
           echo button_back();
@@ -292,6 +297,8 @@
           echo button_show_lsp_results();
           echo '</td><td>';
           echo button_show_lsp_statistics();
+          echo '</td><td>';
+          echo button_show_lsp_export();
           echo '</td><td>';
           echo button_deselect_lsp();
           echo '</td></tr></table></div>';
