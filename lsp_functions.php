@@ -150,15 +150,22 @@ function get_lsps($db) {
  * unknwn
  */
 function get_lsp($db,$lsp) {
-  if (isset($_SESSION['_BENUTZER'])) {
-	$ben=get_benutzer($db,$_SESSION['_BENUTZER']);
+  if (isset($_SESSION['_BENUTZER']) || isset($_SESSION['token'])) {
+    if (isset($_SESSION['_BENUTZER'])) {
+    $ben=get_benutzer($db,$_SESSION['_BENUTZER']);
     $query="SELECT leistungsspange.*,bundesland.name as land, landkreis.name as kreis  FROM leistungsspange LEFT JOIN bundesland on leistungsspange.bundesland=bundesland.id LEFT JOIN landkreis on leistungsspange.kreis=landkreis.id WHERE leistungsspange.id='".$lsp."'";
 	if (!in_array(6,$_SESSION['_RECHTE'])) {
 	  if (in_array(9,$_SESSION['_RECHTE'])) {
 		$query.= " AND leistungsspange.kreis=".$ben['landkreis'];
 	  }
-	  else $query.=" AND besitzer=".$_SESSION['_BENUTZER'];
+	  else {
+            $query.=" AND besitzer=".$_SESSION['_BENUTZER'];
+	  }
 	}
+      }
+    elseif (isset($_SESSION['token'])) {
+      $query="SELECT leistungsspange.*,bundesland.name as land, landkreis.name as kreis  FROM leistungsspange LEFT JOIN bundesland on leistungsspange.bundesland=bundesland.id LEFT JOIN landkreis on leistungsspange.kreis=landkreis.id LEFT JOIN lsp_token on leistungsspange.id=lsp_token.abnahme WHERE leistungsspange.id='".$lsp."' AND lsp_token.token='".$_SESSION['token']."'" ;
+    }
   if ($result = $db->query($query)) {
     while ($line = $result->fetch_assoc()) {
       return $line;
