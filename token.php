@@ -1,6 +1,7 @@
 <?php
 
-  $db = new mysqli('localhost','wertung','jfrating','wertung');
+  require('db_secrets.local.php');
+  $db = new mysqli($dbhost,$dbuser,$dbpass,$dbname);
   $db->set_charset('utf8');
   if ($db->connect_errno) {
     printf("Datenbankverbindung fehlgeschlagen: %s\n", $db->connect_error);
@@ -10,6 +11,8 @@
   session_start();
 
   require('general_functions.php');
+  require('config.php');
+  require('benutzer.php');
   require('lsp_functions.php');
 
   if ($_GET['sort']=='punkte') {
