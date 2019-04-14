@@ -76,7 +76,7 @@ function create_lsp($db,$datum,$land,$kreis,$ort,$ab_name,$ab_vorname,$ab_ort,$s
 }
 
 /**
- * Generiert eine neue VeranstaltungsID und schreibt neuen Datensatz in Datenbank
+ * Generiert eine neue VeranstaltungsID und schreibt den Datensatz einer neuen Leistungsspange in die Datenbank
  * @param str $id VeranstaltungsID (16-stellig)
  */
 function new_lsp($db,$datum,$land,$kreis,$ort,$ab_name,$ab_vorname,$ab_ort,$stempel,$mzf) {
@@ -115,10 +115,10 @@ function select_lsp($lsp) {
 }
 
 /**
- * Ruft alle Leistungsspangen eines Landes sortiert nach Datum (absteigend) aus der Datenbank ab und gibt ein Array dieser zurück
+ * Ruft alle Leistungsspangen aus der Datenbank ab, die der aktuelle Benutzer sehen darf, sortiert nach Datum abwaerts und gibt ein Array dieser zurück
  * @param mysqli $db Datenbankverbindung
  * @param arr $output Array der abgerufenen Leistungsspangen
- * @return arr Gibt ein Array aller Leistungsspangenabnahmen eines Bundeslands nach Datum sortiert zurück
+ * @return arr Gibt ein Array aller Leistungsspangenabnahmen, die der aktuelle Benutzer sehen darf, sortiert nach Datum abwaerts zurück
  */
 function get_lsps($db) {
   global $error_output;
@@ -147,7 +147,7 @@ function get_lsps($db) {
 }
 
 /**
- * unknwn
+ * Ruft eine bestimmte Leistungsspange aus der Datenbank ab, sofern der aktuelle Benutzer diese auch sehen darf, und gibt sie als Array zurueck.
  */
 function get_lsp($db,$lsp) {
   if (isset($_SESSION['_BENUTZER']) || isset($_SESSION['token'])) {
@@ -180,7 +180,7 @@ function get_lsp($db,$lsp) {
 /**
  * Ruft alle Gruppen einer Leistungsspangenabnahme aus Datenbank auf und gibt sie in einem Array zurück
  * @param str $id VeranstaltungsID der ausgewählten LSP-Abnahme
- * unknwn sort
+ * @param sort ist hier noch ungenutzt. Bei den Wettbewerben kann er start_nummer und punkte sein. Hier macht das keinen Sinn.
  */
 function get_lsp_groups($db,$abnahme,$sort) {
   $query="SELECT * FROM lsp_gruppe WHERE abnahme='".$abnahme."'";
@@ -210,7 +210,7 @@ function get_lsp_group_count($db,$abnahme) {
 
 /**
  * Ruft alle Gruppen einer Leistungsspangenabnahme anhand ihres Tokens aus Datenbank auf und gibt sie in einem Array zurück
- * unknwn parameter token
+ * @param str $token ist das unique Token, dass den Benutzer identifiziert, der Gruppen melden kann
  */
 function get_lsp_groups_by_token($db,$token,$sort) {
   $query="SELECT * FROM lsp_gruppe WHERE token='".$token."'";
@@ -239,7 +239,7 @@ function get_lsp_group($db,$abnahme,$grp) {
 }
 
 /**
- * unknwn
+ * Ruft alle generierten Tokens zu einer Leistungsspange ab, sowie die Anzahl gemeldeter Mannschaften zu jedem Token.
  */
 function get_lsp_tokens($db,$abnahme) {
   $query="SELECT t.*, count(g.id) as mannschaften FROM lsp_token AS t LEFT JOIN lsp_gruppe AS g ON t.id=g.token WHERE t.abnahme='".$abnahme."' group by t.id";
@@ -254,7 +254,7 @@ function get_lsp_tokens($db,$abnahme) {
 }
 
 /**
- * Gibt ein bestehendes LSP-Token aus der Datenbank aus
+ * Ruft ein bestimmtes Token aus der Datenbank ab, selektiert durch das Token selbst
  */
 function get_lsp_token($db,$token) {
   $query="SELECT * FROM lsp_token WHERE token='".$token."'";
@@ -268,7 +268,7 @@ function get_lsp_token($db,$token) {
 }
 
 /**
- * Gibt ein bestehendes LSP-Token anhand der VeranstaltungsID aus
+ * Ruft ein bestimmtes Token aus der Datenbank ab, selektiert durch die Token ID und die Leistungsspangenabnahme
  */
 function get_lsp_id_token($db,$abnahme,$id) {
   $query="SELECT * FROM lsp_token WHERE id='".$id."' AND abnahme='".$abnahme."'";
@@ -282,7 +282,7 @@ function get_lsp_id_token($db,$abnahme,$id) {
 }
 
 /**
- * Zählt die Anzahl der männlichen und weiblichen Bewerber einer Gruppe und gibt diese als Array aus
+ * Zählt die Anzahl der männlichen und weiblichen Bewerber e von jeder Gruppe einer Leistungsspange und gibt diese als Array aus (Fuer die Statistik)
  */
 function get_lsp_candidate_count($db,$abnahme) {
   $query="SELECT g.id as grp,sum(if(t.geschlecht='w',1,0)) as bewerber_w, sum(if(t.geschlecht='m',1,0)) as bewerber_m FROM `lsp_gruppe` AS g JOIN lsp_teilnehmer AS t ON g.abnahme=t.abnahme AND g.id = t.gruppe WHERE g.abnahme='18.0601.009.0915' AND t.bewerber='X' GROUP BY g.id";
@@ -329,7 +329,7 @@ function new_lsp_token($db,$abnahme,$email) {
 }
 
 /**
- * Findet die maximale Startnummer einer Gruppe bei einer gewählten Abnahme heraus und gibt diese zurück
+ * Findet die bisher maximale Startnummer einer Gruppe bei einer gewählten Abnahme heraus und gibt diese zurück
  */
 function get_max_lsp_startnummer($db,$lsp) {
   global $error_output;
@@ -342,7 +342,7 @@ function get_max_lsp_startnummer($db,$lsp) {
 }
 
 /**
- * Findet die maximale ID einer Gruppe bei einer gewählten Abnahme heraus und gibt diese zurück
+ * Findet die bisher maximale ID einer Gruppe bei einer gewählten Abnahme heraus und gibt diese zurück
  */
 function get_max_lsp_group_id($db,$lsp) {
   global $error_output;
@@ -355,7 +355,7 @@ function get_max_lsp_group_id($db,$lsp) {
 }
 
 /**
- * Generiert das Formular eine Leistungsspange auszuwählen und listet alle Abnahmen in einer Tabelle auf
+ * Generiert das Formular eine Leistungsspange auszuwählen und listet alle Abnahmen in einer Tabelle auff (Hauptmenue)
  */
 function form_select_lsp($db) {
   if ($lsps = get_lsps($db)) {
@@ -378,7 +378,7 @@ function form_select_lsp($db) {
 }
 
 /**
- * unknwn
+ * Zeigt einen Button, der die aktuell ausgewaehlte Leistungsspange deselektiert, womit zurueck zum Hauptmenue gesprungen wird.
  */
 function button_deselect_lsp() {
   $output='<form action="index.php" method="POST" id="deselectlsp">
@@ -389,7 +389,8 @@ function button_deselect_lsp() {
 }
 
 /**
- * unknwn
+ * Gibt fur verschiedene Sorten Eingabefelder nach Inhaltspruefung die CSS Klasse aus, die dann in 
+ * form_edit_lsp_group_members() und form_edit_lsp_token_group_members() verwendet wird.
  */
 function get_cls($field,$value,$option) {
 //  echo $field.'/'.$value.'/'.$option;
@@ -417,7 +418,7 @@ function get_cls($field,$value,$option) {
 }
 
 /**
- * Generiert das tabellarische Anzeigen der Gruppen in einer LSP-Abnahme
+ * Generiert das tabellarische Anzeigen der Gruppen in einer LSP-Abnahme und somit die Hauptansicht beim Verwalten einer Leistungsspange
  * 
  * @param str $lspid VeranstalungsID der LSP-Abnahme
  */
@@ -723,7 +724,7 @@ function button_delete_lsp_group($id) {
 }
 
 /**
- * Löscht eine Gruppe aus den Tabellen lsp_wertung, lsp_teilnehmer und lsp_gruppe
+ * Löscht eine Gruppe amit all ihren Abhaengigkeiten den Tabellen lsp_wertung, lsp_teilnehmer und lsp_gruppe
  */
 function remove_lsp_group($db,$abnahme,$id) {
   global $error_output;
@@ -758,7 +759,7 @@ function get_lsp_rating($db,$abnahme,$gruppe) {
 }
 
 /**
- * Bewertet die Schnelligkeit für die Schnelligkeitsuebung mit Punkten 0-4
+ * Gibt die Punkte fuer die Schnelligkeitsuebung anhand der Sekunden zurueck
  */
 function get_points_fastness($sekunden) {
   if (!is_numeric($sekunden)) return false;
@@ -771,7 +772,7 @@ function get_points_fastness($sekunden) {
 }
 
 /**
- * Bewertet das Kugelstoßen mit Punkten 0-4
+ * Gibt die Punkte fuer das Kugelstossen anhand der Meter zurueck (Braucht man hier denn auch Nachkommastellen??)
  */
 function get_points_shot_put($meter) {
   if (!is_numeric($meter)) return false;
@@ -784,7 +785,7 @@ function get_points_shot_put($meter) {
 }
 
 /**
- * Bewertet den Staffellauf mit Punkten 0-4
+ * Gibt die Punkte fuer den Staffellauf anhand der Sekunden zurueck
  */
 function get_points_relay($sekunden) {
   if (!is_numeric($sekunden)) return false;
@@ -1426,7 +1427,7 @@ function button_import_lsp_token_group_members($db,$token,$grp) {
 }
 
 /**
- * Generiert das Formular zum Imporieren von Groupmembern
+ * Generiert das Formular zum Imporieren einer Gruppe
  */
 function form_import_lsp_group_members($db,$lsp,$grp) {
  $output='<h1>Gruppe importieren</h1>';
@@ -1448,7 +1449,7 @@ function form_import_lsp_group_members($db,$lsp,$grp) {
 }
 
 /**
- * Generiert das Formular zum Imporieren von Groupmembern mit einem Token
+ * Generiert das Formular zum Imporieren einer Gruppe ueber ein Token
  */
 function form_import_lsp_token_group_members($db,$token,$grp) {
  $output='<h1>Gruppe importieren</h1>';
@@ -1470,7 +1471,7 @@ function form_import_lsp_token_group_members($db,$token,$grp) {
 }
 
 /**
- * Parsed die Eingabe zum Import von Teilnehmern 
+ * Parsed den Import von Teilnehmern 
  * @param str $import Importierter Text durch Eingabemaske
  */
 function parse_lsp_group_import($db,$lsp,$grp,$import) {
@@ -1591,7 +1592,7 @@ function parse_lsp_group_import($db,$lsp,$grp,$import) {
 }
 
 /**
- * Generiert ein Formular zum Abfragen des Tokens
+ * Generiert ein Formular zum Einlogogen ueber ein Token
  */
 function form_ask_lsp_token() {
   $output='<h1>Token eingeben</h1>';
@@ -1645,11 +1646,7 @@ function select_lsp_token($db,$token) {
  */
 function form_show_lsp_token_groups($db,$token,$sort) {
   global $error_output;
-//  print_r($_POST);
-//  print_r($_SESSION);
-//  echo $lspid;
   $token=get_lsp_token($db,$token);
-//  print_r($token);
   if ($lsp=get_lsp($db,$token['abnahme'])) {
     $output='<h1>Leistungsspange der DJF</h1>';
     $output.='<h2>'.date('d.m.Y',strtotime($lsp['datum'])).' '.$lsp['ort'].', '.$lsp['kreis'].' ('.$lsp['land'].')</h2>';
@@ -1685,7 +1682,7 @@ function button_lsp_token_logout() {
 }
 
 /**
- * Generiert ein Formular zum Ändern der Daten einer Gruppe mit einem Token
+ * Generiert ein Formular zum aendern der Daten einer Gruppe ueber ein Token
  */
 function form_edit_lsp_token_group($db,$token,$gid) {
   $token=get_lsp_token($db,$token);
@@ -1745,9 +1742,7 @@ function button_back_token() {
 }
 
 /**
- * Unknwn 
- * ## Noch nicht in Live-Version? ##
- * Generiert ein Formular zum Bearbeiten der Bewerber einer Gruppe mit einem Token
+ * Generiert ein Formular zum Bearbeiten der Bewerber einer Gruppe ueber ein Token
  */
 function form_edit_lsp_token_group_members($db,$token,$gid) {
   $token=get_lsp_token($db,$token);
@@ -1823,7 +1818,7 @@ function form_edit_lsp_token_group_members($db,$token,$gid) {
 }
 
 /**
- * Generiert einen Button um das Formular zum Erstellen einer Gruppe mit einem Token aufzurufen
+ * Generiert einen Button um das Formular zum Erstellen einer Gruppe ueber ein Token aufzurufen
  */
 function button_create_lsp_token_group() {
   $output='<form action="token.php" method="POST" id="addlsptokengrp">
@@ -1833,8 +1828,7 @@ function button_create_lsp_token_group() {
 }
 
 /**
- * Generiert das Formular zum Erstellen einer Gruppe mit einem Token
- * ## TODO: Datum wird nicht korrekt angezeigt. 
+ * Generiert das Formular zum Erstellen einer Gruppe ueber ein Token
  */
 function form_create_lsp_token_group($db,$token) {
   $token=get_lsp_token($db,$token);
@@ -1867,7 +1861,7 @@ function form_create_lsp_token_group($db,$token) {
 }
 
 /**
- * Fügt die neu erstellte Gruppe mit Token in die Datenbank ein
+ * Fügt die ueber ein Token neu erstellte Gruppe in die Datenbank ein
  */
 function insert_lsp_token_group($db,$token) {
   global $error_output;
@@ -1886,7 +1880,7 @@ function insert_lsp_token_group($db,$token) {
 }
 
 /**
- * Generiert einen Button zum Löschen einer Gruppe mit einem Token
+ * Generiert einen Button zum Löschen einer Gruppe mueber ein Token
  */
 function button_delete_lsp_token_group($id) {
   $output.='<form action="token.php" method="POST" id="dellsptokengrp">
@@ -1898,7 +1892,7 @@ function button_delete_lsp_token_group($id) {
 }
 
 /**
- * Löscht eine Gruppe mit einem Token aus der Datenbank aus wertung-, teilnehmer- und Gruppentabelle
+ * Löscht eine Gruppe  ueber ein  Token aus der Datenbank aus wertung-, teilnehmer- und Gruppentabelle
  */
 function remove_lsp_token_group($db,$token,$grp) {
   global $error_output;
@@ -1921,7 +1915,7 @@ function remove_lsp_token_group($db,$token,$grp) {
 }
 
 /**
- * Updatet Bewerberdaten mit einem Token in der Datenbank
+ * Updatet Bewerberdaten ueber ein Token in der Datenbank
  */
 function modify_lsp_token_group_members($db,$token,$gid) {
   global $error_output;
@@ -2005,10 +1999,6 @@ function show_lsp_statistics($db,$abnahme) {
       $erfolg['m']+=$count[$item['gruppe']]['m'];
     }
   }
-//  print_r($gesamt);
-//  print_r($erfolg);
-//  print_r($list);
-//  print_r($count);
   $output='<h1>Statistik</h1>';
   $output.='<table>';
   $output.='<tr><th>Gruppen</th><td>'.get_lsp_group_count($db,$abnahme).'</td></tr>';
