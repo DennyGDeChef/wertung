@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Läd Wettbewerbe nach Bundesland, Landkreis und Benutzer aus der Datenbank
+ */
 function get_competitions($db) {
   global $error_output;
   if (isset($_SESSION['_BENUTZER'])) {
@@ -27,6 +30,9 @@ function get_competitions($db) {
   return false;
 }
 
+/**
+ * Läd einen Wettbewerb anhand einer VeranstaltungsID aus der Datenbank
+ */
 function get_competition($db,$id) {
   if (isset($_SESSION['_BENUTZER'])) {
     $ben=get_benutzer($db,$_SESSION['_BENUTZER']);
@@ -48,6 +54,9 @@ function get_competition($db,$id) {
   return false;
 }
 
+/**
+ * Legt einen neuen Wettbewerb in der Datenbank an
+ */
 function new_competition($db,$datum,$land,$kreis,$ort,$art,$typ) {
   global $error_output;
   if ($result = $db->query("INSERT wettbewerb SET datum='".$datum."', land='".$land."', kreis='".$kreis."', ort='".$ort."', art=".$art.", typ=".$typ.", besitzer=".$_SESSION['_BENUTZER'])) {
@@ -57,6 +66,9 @@ function new_competition($db,$datum,$land,$kreis,$ort,$art,$typ) {
   return false;
 }
 
+/**
+ * Gibt die Anzahl der angelegten Wettkämpfe zurück
+ */
 function get_max_competition($db) {
   if ($result = $db->query("SELECT max(id) as id FROM wettbewerb")) {
     while ($line = $result->fetch_row()){
@@ -68,6 +80,9 @@ function get_max_competition($db) {
 
 }
 
+/**
+ * Ruft alle Mannschaften eines Wettbewerbs aus der Datenbank auf
+ */
 function get_teams($db,$id,$sort) {
   $query="SELECT * FROM mannschaft WHERE wettbewerb=".$id." ORDER BY ".$sort.",name";
   if ($result = $db->query($query)) {
@@ -80,6 +95,9 @@ function get_teams($db,$id,$sort) {
   else return false;
 }
 
+/**
+ * Gibt eine Mannschaft mit einer bestimmten ID aus
+ */
 function get_team($db,$id) {
   if ($result = $db->query("SELECT * FROM mannschaft WHERE id=".$id)) {
     while ($line = $result->fetch_assoc()){
@@ -90,6 +108,9 @@ function get_team($db,$id) {
   else return false;
 }
 
+/**
+ * Gibt alle Mannschaftstypen aus der Tabelle Mannschaftstypen aus
+ */
 function get_teamtypes($db) {
   if ($result = $db->query("SELECT * FROM mannschaftstyp")) {
     $output=array();
@@ -101,6 +122,9 @@ function get_teamtypes($db) {
   else return false;
 }
 
+/**
+ * Ruft den Mannschaftstyp anhand einer ID aus der Datenbank auf
+ */
 function get_teamtype($db,$id) {
   if ($result = $db->query("SELECT * FROM mannschaftstyp WHERE id=".$id)) {
     while ($line = $result->fetch_assoc()){
@@ -111,7 +135,9 @@ function get_teamtype($db,$id) {
   else return false;
 }
 
-
+/**
+ * Ruft alle Mannschaftsmitglieder einer Mannschaft anhand der MannschaftsID ab
+ */
 function get_teammembers($db,$id) {
   if ($result = $db->query("SELECT * FROM mannschaftsmitglieder WHERE mannschaft=".$id." ORDER BY position ASC")) {
     $output=array();
@@ -123,6 +149,9 @@ function get_teammembers($db,$id) {
   else return false;
 }
 
+/**
+ * Errechnet das Durchschnittsalter anhand der Mannschaft und setzt es in der Datenbank in der Tabelle Mannschaft
+ */
 function set_teamage($db,$id) {
   global $error_output;
   $cmp=get_competition($db,get_team($db,$id)['wettbewerb']);
@@ -145,6 +174,9 @@ function set_teamage($db,$id) {
   return true;
 }
 
+/**
+ * Ruft alle vorhandenen Wettbewerbsarten aus der Datenbank auf
+ */
 function get_competitiontypes($db) {
   if ($result = $db->query("SELECT * FROM wettbewerbstyp")) {
     $output=array();
@@ -156,6 +188,9 @@ function get_competitiontypes($db) {
   else return false;
 }
 
+/**
+ * Ruft alle Wettbewerbsarten (Staffelwettbewerb HJF // BWB) aus der Datenbank auf
+ */
 function get_competitionkinds($db) {
   if ($result = $db->query("SELECT * FROM wettbewerbsart")) {
     $output=array();
@@ -167,6 +202,9 @@ function get_competitionkinds($db) {
   else return false;
 }
 
+/**
+ * Ruft den Wettbewerbstyp (Offenes Gewässer // Hydrant) anhand der ID auf
+ */
 function get_competitiontype($db,$id) {
   global $error_output;
   if ($result = $db->query("SELECT * FROM wettbewerbstyp WHERE id=".$id)) {
@@ -181,6 +219,9 @@ function get_competitiontype($db,$id) {
   }
 }
 
+/**
+ * Ruft die Wettbewerbsart (Staffelwettbewerb HJF // BWB) anhand einer ID auf
+ */
 function get_competitionkind($db,$id) {
   global $error_output;
   if ($result = $db->query("SELECT * FROM wettbewerbsart WHERE id=".$id)) {
@@ -195,6 +236,9 @@ function get_competitionkind($db,$id) {
   }
 }
 
+/**
+ * Ruft die Wettbewerbsvorgaben anhand der Wettbewerbsart und -typ auf
+ */
 function get_competitionspecs($db,$art,$typ) {
   global $error_output;
   if ($result = $db->query("SELECT * FROM wettbewerbsvorgaben WHERE art=".$art." AND typ=".$typ)) {
@@ -209,6 +253,9 @@ function get_competitionspecs($db,$art,$typ) {
   }
 }
 
+/**
+ * Setzt die Vorgabezeiten für eine Mannschaft anhand des Wettbewerbsart und -typ. 
+ */
 function set_vorgabezeit_b($db,$id) {
   global $error_output;
   $gruppe = get_team($db,$id);
@@ -230,6 +277,9 @@ function set_vorgabezeit_b($db,$id) {
   }
 }
 
+/**
+ * Ruft die Bewertung einer Mannscahft unter Berücksichtigung der Wettbewerbsart (Staffel bzw. Gruppenwertung) aus der DB auf
+ */
 function get_rating($db,$id) {
   $wb=get_competition($db,get_team($db,$id)['wettbewerb']);
   $query="";
@@ -248,6 +298,9 @@ function get_rating($db,$id) {
   else return false;
 }
 
+/**
+ * Führt die Bewertung einer Mannschaft aus und updatet die Tabelle Mannschaft entsprechend
+ */
 function set_points($db,$id) {
   global $error_output;
   $rat=get_rating($db,$id);
@@ -288,6 +341,9 @@ function set_points($db,$id) {
   }
 }
 
+/**
+ * Gibt die höchste Startnummer (+1) in einm Wettbewerb zurück (Sprich die nächste freie Startnummer)
+ */
 function get_max_startnummer($db,$wb) {
   global $error_output;
   if (!($result=$db->query("SELECT max(startnummer) as max FROM mannschaft WHERE wettbewerb=".$wb))) {
@@ -296,6 +352,9 @@ function get_max_startnummer($db,$wb) {
   return($result->fetch_row()[0]+1);
 }
 
+/**
+ * Löscht einen Wettbewerb inklusive der beteiligten Teams
+ */
 function rem_competition($db,$id) {
   global $error_output;
   $wb=get_competition($db,$id);
@@ -322,6 +381,9 @@ function rem_competition($db,$id) {
   return false;
 }
 
+/**
+ * Löscht ein Team anhand seiner ID inklusiver seiner Mitglieder
+ */
 function rem_team($db,$id) {
   global $error_output;
   $wb=get_competition($db,$_SESSION['WB']);
@@ -358,6 +420,9 @@ function rem_team($db,$id) {
   return false;
 }
 
+/**
+ * Generiert ein Formular zum auswählen eines Wettbewerbs
+ */
 function form_select_competition($db) {
   if ($wbs = get_competitions($db)) {
   $output='<h1>Wettbewerb ausw&auml;hlen</h1>';
@@ -376,6 +441,9 @@ function form_select_competition($db) {
   return false;
 }
 
+/**
+ * Generiert ein Formular zum Erstellen eines Wettbewerbs
+ */
 function form_create_competition($db,$land=01) {
   if ($wbtps=get_competitiontypes($db)) {
     if ($wbarts=get_competitionkinds($db)) {
@@ -447,6 +515,9 @@ function button_deselect_competition() {
   return $output;
 }
 
+/**
+ * Generiert ein Formular zum Anzeigen von Mannschaften in einem Wettbewerb
+ */
 function form_show_competition_teams($db,$wid,$sort) {
   if ($wb=get_competition($db,$wid)) {
     $output='<h1>'.$wb['artname'].'</h1>';
@@ -475,6 +546,9 @@ function form_show_competition_teams($db,$wid,$sort) {
   return false;
 }
 
+/**
+ * Generiert einen Button zum erstellen einer neuen Mannschaft 
+ */
 function button_create_competition_team() {
   $output='<form action="index.php" method="POST" id="addgrp">
   <input type="hidden" name="do" value="addgrp">
@@ -482,6 +556,9 @@ function button_create_competition_team() {
   return $output;
 }
 
+/**
+ * Generiert ein Formular zum Erstellen einer neuen Mannschaft in einem Wettbewerb
+ */
 function form_create_competition_team($db,$wid) {
   $wb=get_competition($db,$wid);
   $grptps=get_teamtypes($db);
@@ -506,6 +583,9 @@ function form_create_competition_team($db,$wid) {
   return $output;
 }
 
+/**
+ * Generiert ein Formular zum Bearbeiten einer Mannschaft in einem Wettbewerb
+ */
 function form_edit_competition_team($db,$gid) {
   $grp=get_team($db,$gid);
   $grptps=get_teamtypes($db);
@@ -531,6 +611,9 @@ function form_edit_competition_team($db,$gid) {
   return $output;
 }
 
+/**
+ * Generiert einen Button zum Löschen einer Mannschaft in einem Wettbewerb
+ */
 function button_delete_competition_team($id) {
   $output.='<form action="index.php" method="POST" id="delgrp">
   <input type="hidden" name="do" value="removegrp"> 
@@ -540,6 +623,9 @@ function button_delete_competition_team($id) {
   return $output;
 }
 
+/**
+ * Generiert einen Button zum Löschen eines Wettbewerbs
+ */
 function button_delete_competition() {
   $output.='<form action="index.php" method="POST" id="delwb">
   <input type="hidden" name="do" value="removewb"> 
@@ -549,6 +635,9 @@ function button_delete_competition() {
   return $output;
 }
 
+/**
+ * Generiert ein Formular zum Bearbeiten von Mannschaftsmitgliedern
+ */
 function form_edit_team_members($db,$gid) {
   $grp=get_team($db,$gid);
   $grpmbs=get_teammembers($db,$gid);
@@ -589,6 +678,9 @@ function form_edit_team_members($db,$gid) {
   return $output;
 }
 
+/**
+ * Generiert ein Formular zur Eingabe der Wettbewerbsergebnisse einer Mannschaft
+ */
 function form_rate_team($db,$gid) {
   $grp=get_team($db,$gid);
   $wb=get_competition($db,$grp['wettbewerb']);
@@ -724,6 +816,9 @@ function form_rate_team($db,$gid) {
   return $output;
 }
 
+/**
+ * Generiert eine Gewinnerliste aus der Datenbank und gibt diese als Array aus
+ */
 function get_winnerlist($db) {
   $wb=get_competition($db,$_SESSION['WB']);
   switch ($wb['art']) {
@@ -744,6 +839,9 @@ function get_winnerlist($db) {
   return $list;
 }
 
+/**
+ * Wählt einen Wettbewerb anhand einer ID aus und setzt ihn in der Session-Variablen
+ */
 function select_competition($wb) {
   if ($wb=='null') {
     unset($_SESSION['WB']);
@@ -762,6 +860,9 @@ function select_competition($wb) {
   }
 }
 
+/**
+ * Erstellt einen neuen Wettbewerb in der Datenbank
+ */
 function create_competition($db,$datum,$land,$kreis,$ort,$art,$typ) {
   global $error_output;
   if (!(trim($datum=='')) && !(trim($land=='')) &&!(trim($kreis=='')) &&!(trim($ort=='')) &&!(trim($art=='')) &&!(trim($typ==''))) {
@@ -773,6 +874,9 @@ function create_competition($db,$datum,$land,$kreis,$ort,$art,$typ) {
   return false;
 }
 
+/**
+ * Fügt eine Mannschaft in die Datenbank ein
+ */
 function insert_team($db) {
     global $error_output;
     if (!(trim($_POST['name'])=='')) {
@@ -787,6 +891,9 @@ function insert_team($db) {
     }
 }
 
+/**
+ * Modifiziert eine Mannschaft in der Datenbank
+ */
 function modify_team($db,$grp,$startnummer,$name,$typ) {
     global $error_output;
     if (!($db->query("UPDATE mannschaft SET startnummer=".((int)$startnummer).", name='".$name."', typ=".((int)$typ)." WHERE id=".$grp) === TRUE)) {
@@ -796,6 +903,9 @@ function modify_team($db,$grp,$startnummer,$name,$typ) {
     return true;
 }
 
+/**
+ * Modifiziert Mannschaftsmitglieder in der Datenbank
+ */
 function modify_team_members($db) {
   global $error_output;
   $grp=get_team($db,$_POST['id']);
@@ -819,6 +929,9 @@ function modify_team_members($db) {
   unset($_POST);
 }
 
+/**
+ * Modifiziert die Bewertung einer Gruppe in der Datenbank
+ */
 function modify_rating($db) {
     global $error_output;
     $wb=get_competition($db,get_team($db,$_POST['id'])['wettbewerb']);
@@ -884,6 +997,9 @@ function modify_rating($db) {
     set_points($db,$_POST['id']);
 }
 
+/**
+ * Generiert einen Button zum Anzeigen der Gewinnerliste
+ */
 function button_show_winnerlist() {
   $output='<form action="index.php" method="POST" id="showwins">
   <input type="hidden" name="do" value="showwins">
@@ -891,6 +1007,9 @@ function button_show_winnerlist() {
   return $output;
 }
 
+/**
+ * Generiert das Formular zum Anzeigen der Gewinnerliste
+ */
 function show_winnerlist($db) {
   $list=get_winnerlist($db);
   $wb=get_competition($db,$_SESSION['WB']);
@@ -921,6 +1040,9 @@ function show_winnerlist($db) {
   return $output;
 }
 
+/**
+ * Ruft eine Bewertung einer Mannschaft aus der Datenbank ab und gibt diese in einem Formular aus
+ */
 function show_team_rating($db,$grp,$rtg) {
   $wb=get_competition($db,$_SESSION['WB']);
   $wbk=get_competitionkind($db,$wb['art']);
@@ -1021,6 +1143,9 @@ function show_team_rating($db,$grp,$rtg) {
   return $output;
 }
 
+/**
+ * Generiert einen Button zum Erstellen eines neuen Wettbewerbs
+ */
 function button_create_competition() {
   $output='<form action="index.php" method="POST" id="addcomp">
   <input type="hidden" name="screen" value="addcomp">
