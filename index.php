@@ -11,7 +11,6 @@
   session_start();
 
   require('general_functions.php');
-  require('config.php');
   require('benutzer.php');
   require('wb_functions.php');
   require('lsp_functions.php');
@@ -103,6 +102,9 @@
       break;
     case 'selectlsp':
       select_lsp($_POST['lsp']);
+      break;
+    case 'modifylsp':
+      modify_lsp($db,$_SESSION['LSP'],$_POST['datum'],$_POST['land'],$_POST['kreis'],$_POST['ort'],$_POST['ab_name'],$_POST['ab_vorname'],$_POST['ab_ort'],$_POST['stempel'],$_POST['mzf']);
       break;
     case 'insertlspgrp':
       insert_lsp_group($db);
@@ -224,6 +226,10 @@
   else {
     if ($_SESSION['WB']=='lsp' && $_SESSION['_BENUTZER']>0) {
       switch ($_POST['do']) {
+	case 'editlsp':
+	  echo form_edit_lsp($db,$_SESSION['LSP']);
+	  echo button_back();
+	  break;
         case 'addlspgrp':
           echo form_create_lsp_group($db,$_SESSION['LSP']);
           echo button_back();

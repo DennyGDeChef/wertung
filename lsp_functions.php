@@ -76,6 +76,59 @@ function create_lsp($db,$datum,$land,$kreis,$ort,$ab_name,$ab_vorname,$ab_ort,$s
 }
 
 /**
+ * Prüft die Daten, um dann damit die Stammdaten einer Leistungsspange zu verändern
+*/
+
+
+function modify_lsp($db,$abnahme,$datum,$land,$kreis,$ort,$ab_name,$ab_vorname,$ab_ort,$stempel,$mzf) {
+  global $error_output;
+  if (!(trim($datum=='')) && !(trim($land=='')) &&!(trim($kreis=='')) &&!(trim($ort=='')) &&!(trim($ab_name=='')) &&!(trim($ab_vorname=='')) &&!(trim($ab_ort=='')) &&!(trim($stempel==''))) {
+    if ($id=change_lsp($db,$abnahme,date('Y-m-d',strtotime($datum)),$land,$kreis,$ort,$ab_name,$ab_vorname,$ab_ort,$stempel,$mzf))
+    {
+      select_lsp($id);
+      return true;
+    }
+    return false;
+  }
+  $error_output="Das hat nicht geklappt, weil nicht alle Felder korrekt ausgef&uuml;llt wurden.";
+  return false;
+}
+
+/**
+ * Verändert die Stammdaten einer Leistungsspange und aller verknüpften Tabellen, falls nötig.
+*/
+
+function change_lsp($db,$abnahme,$datum,$land,$kreis,$ort,$ab_name,$ab_vorname,$ab_ort,$stempel,$mzf) {
+  global $error_output;
+    $id = substr($datum,2,2).'.'.$land.str_pad($mzf,2,'0',STR_PAD_LEFT).'.'.str_pad($stempel,3,'0',STR_PAD_LEFT).'.'.substr($datum,5,2).substr($datum,8,2);
+    if ($id != $abnahme) {
+      $query="SELECT id FROM leistungsspange WHERE id='".$id."'";
+      $result=$db->query($query);
+      if ($result->num_rows > 0) {
+        $error_output="Aenderung nicht moeglich, da die aus der Aenderung resultierende neue Veranstaltungs-ID bereits von einem anderen Datensatz verwendet wird!";
+        return $abnahme;
+      }
+    }
+    $query="UPDATE leistungsspange SET id='".$id."', bundesland='".$land."', mzf='".$mzf."', stempel='".$stempel."', datum='".$datum."', ort='".$ort."', kreis='".$kreis."', ab_name='".$ab_name."', ab_vorname='".$ab_vorname."', ab_ort='".$ab_ort."' WHERE id='".$abnahme."'";
+    if ($db->query($query)) {
+      if ($id != $abnahme) {
+        $query="UPDATE lsp_gruppe SET abnahme='".$id."' WHERE abnahme='".$abnahme."'";
+        $db->query($query);
+        $query="UPDATE lsp_teilnehmer SET abnahme='".$id."' WHERE abnahme='".$abnahme."'";
+        $db->query($query);
+        $query="UPDATE lsp_token SET abnahme='".$id."' WHERE abnahme='".$abnahme."'";
+        $db->query($query);
+        $query="UPDATE lsp_wertung SET abnahme='".$id."' WHERE abnahme='".$abnahme."'";
+        $db->query($query);
+      }
+      return $id;
+    }
+    $error_output=$db->error;
+    return $abnahme;
+}
+
+
+/**
  * Generiert eine neue VeranstaltungsID und schreibt den Datensatz einer neuen Leistungsspange in die Datenbank
  * @param str $id VeranstaltungsID (16-stellig)
  */
@@ -153,7 +206,7 @@ function get_lsp($db,$lsp) {
   if (isset($_SESSION['_BENUTZER']) || isset($_SESSION['token'])) {
     if (isset($_SESSION['_BENUTZER'])) {
     $ben=get_benutzer($db,$_SESSION['_BENUTZER']);
-    $query="SELECT leistungsspange.*,bundesland.name as land, landkreis.name as kreis  FROM leistungsspange LEFT JOIN bundesland on leistungsspange.bundesland=bundesland.id LEFT JOIN landkreis on leistungsspange.kreis=landkreis.id WHERE leistungsspange.id='".$lsp."'";
+    $query="SELECT leistungsspange.*,bundesland.name as land, landkreis.name as landkreis  FROM leistungsspange LEFT JOIN bundesland on leistungsspange.bundesland=bundesland.id LEFT JOIN landkreis on leistungsspange.kreis=landkreis.id WHERE leistungsspange.id='".$lsp."'";
 	if (!in_array(6,$_SESSION['_RECHTE'])) {
 	  if (in_array(9,$_SESSION['_RECHTE'])) {
 		$query.= " AND leistungsspange.kreis=".$ben['landkreis'];
@@ -164,7 +217,7 @@ function get_lsp($db,$lsp) {
 	}
       }
     elseif (isset($_SESSION['token'])) {
-      $query="SELECT leistungsspange.*,bundesland.name as land, landkreis.name as kreis  FROM leistungsspange LEFT JOIN bundesland on leistungsspange.bundesland=bundesland.id LEFT JOIN landkreis on leistungsspange.kreis=landkreis.id LEFT JOIN lsp_token on leistungsspange.id=lsp_token.abnahme WHERE leistungsspange.id='".$lsp."' AND lsp_token.token='".$_SESSION['token']."'" ;
+      $query="SELECT leistungsspange.*,bundesland.name as land, landkreis.name as landkreis  FROM leistungsspange LEFT JOIN bundesland on leistungsspange.bundesland=bundesland.id LEFT JOIN landkreis on leistungsspange.kreis=landkreis.id LEFT JOIN lsp_token on leistungsspange.id=lsp_token.abnahme WHERE leistungsspange.id='".$lsp."' AND lsp_token.token='".$_SESSION['token']."'" ;
     }
   if ($result = $db->query($query)) {
     while ($line = $result->fetch_assoc()) {
@@ -426,14 +479,14 @@ function form_show_lsp_groups($db,$lspid,$sort) {
   global $error_output;
   if ($lsp=get_lsp($db,$lspid)) {
     $output='<h1>Leistungsspange der DJF</h1>';
-    $output.='<h2>'.date('d.m.Y',strtotime($lsp['datum'])).' '.$lsp['ort'].', '.$lsp['kreis'].' ('.$lsp['land'].')</h2>';
+    $output.='<h2><form action="index.php" method="POST" id="showeditlsp"><input type="hidden" name="do" value="editlsp"><input class="shwedtcmp" type="submit" value="'.date('d.m.Y',strtotime($lsp['datum'])).' '.$lsp['ort'].', '.$lsp['landkreis'].' ('.$lsp['land'].')"></form></h2>';
     if ($grps=get_lsp_groups($db,$lspid,$sort)) {
       $output.='<table>
         <tr><th><a href="index.php?sort=startnummer">Start Nr</a></th><th>Name</th><th>Land</th><th>Bezirk</th><th>Kreis</th><th>Ort</th></tr>';
       foreach ($grps as $grp) {
         $output.='<tr><td>'.$grp['startnummer'].'</td>
           <td><form action="index.php" method="POST" id="editlspgrp"><input type="hidden" name="do" value="editlspgrp"><input type="hidden" name="gruppe" value="'.$grp['id'].'"><input class="shwedtgrp" type="submit" value="'.$grp['name'].'"></form></td>
-          <td>'.get_bundesland($db,$grp['bundesland']).'</td><td>'.$grp['bezirk'].'</td><td>'.$grp['kreis'].'</td><td>'.$grp['ort'].'</td>
+          <td>'.get_bundesland($db,$grp['bundesland']).'</td><td>'.$grp['bezirk'].'</td><td>'.$grp['landkreis'].'</td><td>'.$grp['ort'].'</td>
           <td><form action="index.php" method="POST" id="editlspgrpmember">
             <input type="hidden" name="do" value="editlspgrpmembers"><input type="hidden" name="gruppe" value="'.$grp['id'].'"><input class="edtlspgrpmbr" type="submit" value="Teilnehmer">
           </form></td>
@@ -468,7 +521,7 @@ function form_create_lsp_group($db,$lspid) {
   $lsp=get_lsp($db,$lspid);
   $blr=get_bundeslaender($db);
   $output='<h1>Neue Gruppe anlegen</h1>
-  <h2>'.date('d.m.Y',strtotime($lsp['datum'])).' '.$lsp['ort'].', '.$lsp['kreis'].' ('.$lsp['land'].')</h2>
+  <h2>'.date('d.m.Y',strtotime($lsp['datum'])).' '.$lsp['ort'].', '.$lsp['landkreis'].' ('.$lsp['land'].')</h2>
   <form action="index.php" method="POST" id="addlspgrp">
     <input type="hidden" name="do" value="insertlspgrp">
     <table>
@@ -509,6 +562,43 @@ function insert_lsp_group($db) {
     $error_output='Alle Felder m&uuml;ssen ausgef&uuml;llt werden!';
   }
 }
+
+/**
+ * Formular zum aendern einer Leistungsspange
+ */
+
+function form_edit_lsp($db,$abnahme) {
+  $lsp=get_lsp($db,$abnahme);
+  $lkr=get_landkreise_bundesland($db,$lsp['bundesland']);
+  $output='<h1>Leistungsspange der DJF</h1>';
+  $output.='<form action="index.php" method="POST" id="modifylsp">
+      <input type="hidden" name="do" value="modifylsp">
+      <input type="hidden" name="land" value="'.$lsp['bundesland'].'">
+      <table>
+        <tr><th colspan="2">Veranstaltung</th></tr>
+        <tr><th>Datum</th><td><input type="date" name="datum" value="'.$lsp['datum'].'"></td></tr>
+        <tr><th>Ort</th><td><input type="text" name="ort" value="'.$lsp['ort'].'"></td></tr>
+        <tr><th>Kreis</th><td><select name="kreis">';
+        foreach ($lkr as $lk) {
+          $output.='<option value="'.$lk['id'].'"';
+          if ($lk['id']==$lsp['kreis']) $output.=' selected';
+          $output.='>';
+          $output.=$lk['name'].'</option>';
+
+        }
+  $output.='</select></td></tr>
+            <tr><th colspan="2">Abnahmeberechtigter</th></tr>
+            <tr><th>Vorname</th><td><input type="text" name="ab_vorname" value="'.$lsp['ab_vorname'].'"></td></tr>
+            <tr><th>Name</th><td><input type="text" name="ab_name" value="'.$lsp['ab_name'].'"></td></tr>
+            <tr><th>Ort</th><td><input type="text" name="ab_ort" value="'.$lsp['ab_ort'].'"></td></tr>
+            <tr><th>Stempel</th><td><input type="text" name="stempel" maxlength="3" size="3" value="'.$lsp['stempel'].'"></td></tr>
+            <tr><th>Mehrzweckfeld</th><td><input type="text" name="mzf" maxlength="2" size="2" value="'.$lsp['mzf'].'"></td></tr>
+            <tr><td colspan="2"><input type="submit" value="OK"></td></th>
+         </table>
+       </form>';
+  return $output;
+}
+
 
 /**
  * Generiert ein Formular zum Bearbeiten einer Gruppe in einer LSP-Abnahme
