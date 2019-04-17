@@ -11,7 +11,6 @@
   session_start();
 
   require('general_functions.php');
-  require('config.php');
   require('benutzer.php');
   require('lsp_functions.php');
 

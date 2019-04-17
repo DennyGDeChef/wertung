@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Legt den HTML-Head der HTML an
+ */
 function html_head() {
   echo '<!DOCTYPE html>
 <html lang="de">
@@ -15,12 +18,18 @@ function html_head() {
 //';
 }
 
+/**
+ * Legt das Ende der HTML an
+ */
 function html_foot() {
   echo '
   </body>
 </html>';
 }
 
+/**
+ * Generiert einen Fehler-Output
+ */
 function error_output() {
   global $error_output;
   if (strlen($error_output) > 0) {
@@ -29,6 +38,9 @@ function error_output() {
   else return;
 }
 
+/**
+ * Läd alle Bundesländer, alphabetisch sortiert aus der Datenbank
+ */
 function get_bundeslaender($db) {
   if ($result = $db->query("SELECT * FROM bundesland ORDER BY name")) {
     $output=array();
@@ -40,6 +52,10 @@ function get_bundeslaender($db) {
   else return false;
 }
 
+/**
+ * Läd ein Bundesland mit einer bestimmten ID aus der Datenbank
+ * @param int $id Bundesland-ID
+ */
 function get_bundesland($db,$id) {
   if ($result = $db->query("SELECT * FROM bundesland WHERE id='".$id."'")) {
     while ($line = $result->fetch_assoc()){
@@ -50,6 +66,9 @@ function get_bundesland($db,$id) {
   else return false;
 }
 
+/**
+ * Läd alle Landkreise alphabetisch sortiert aus der Datenbank
+ */
 function get_landkreise($db) {
   if ($result = $db->query("SELECT * FROM landkreis ORDER BY name")) {
     $output=array();
@@ -61,6 +80,10 @@ function get_landkreise($db) {
   else return false;
 }
 
+/**
+ * Läd den Zusammenhang zwischen Bundesland und Landkreis aus der Datenbank
+ * @param int $bundesland Bundesland-ID
+ */
 function get_landkreise_bundesland($db,$bundesland) {
   if ($result = $db->query("SELECT landkreis.* FROM landkreis LEFT JOIN bezirk on landkreis.bezirk=bezirk.id LEFT JOIN bundesland on bezirk.bundesland=bundesland.id WHERE bundesland.id='".$bundesland."' ORDER BY name")) {
     $output=array();
@@ -72,6 +95,10 @@ function get_landkreise_bundesland($db,$bundesland) {
   else return false;
 }
 
+/**
+ * Läd die Informationen eines Landkreises anhand seiner ID aus der Datenbank
+ * @param int $id Landkreis-ID
+ */
 function get_landkreis($db,$id) {
   if ($result = $db->query("SELECT * FROM landkreis WHERE id='".$id."'")) {
     while ($line = $result->fetch_assoc()){
@@ -82,6 +109,9 @@ function get_landkreis($db,$id) {
   else return false;
 }
 
+/**
+ * Generiert einen Zurück-Button
+ */
 function button_back() {
   $output='<form action="index.php" method="POST" id="nothing">
   <input type="hidden" name="do" value="nothing">
@@ -90,6 +120,9 @@ function button_back() {
   return $output;
 }
 
+/**
+ * Gibt die System-URL zurück
+ */
 function get_system_url() {
   $url = $_SERVER['REQUEST_URI'];
   $parts = explode('/',$url);
@@ -101,6 +134,9 @@ function get_system_url() {
   return $system_url;
 }
 
+/**
+ * unknwn
+ */
 function js_post_function() {
   $output='function post(path, params, method) {
     method = method || "post";
@@ -123,6 +159,10 @@ function js_post_function() {
   return $output;
 }
 
+/**
+ * Läd ein Bundesland anhand eines Landkreises
+ * @param int $lkr Landkreis-ID
+ */
 function get_bundesland_from_landkreis($db,$lkr) {
   if ($result = $db->query("SELECT bundesland.* from bundesland LEFT JOIN bezirk on bundesland.id=bezirk.bundesland LEFT JOIN landkreis ON bezirk.id=landkreis.bezirk WHERE landkreis.id=".$lkr)) {
     while ($line = $result->fetch_assoc()){
@@ -132,11 +172,17 @@ function get_bundesland_from_landkreis($db,$lkr) {
   else return false;
 }
 
+/**
+ * Fügt den Dateinamen dem Download-Header an
+ */
 function download_head($filename,$filetype) {
   header('Content-Disposition: attachment; filename="'.$filename.'"');
   header("Content-Type: ".$filetype.";");
 }
 
+/**
+ * Konvertiert ein Array zu einem CSV-String
+ */
 function make_csv($array) {
 	for ($i=0;$i<sizeof($array);$i++) {
 		$array[$i]='"'.$array[$i].'"';
@@ -145,10 +191,17 @@ function make_csv($array) {
 	return $csv;
 }
 
+/**
+ * Konvertiert eine Uhrzeit in eine Zeitspanne in Sekunden
+ */
 function hmstosec($value) {
 	return strtotime("1970-01-01 ".$value." UTC");
 }
 
+/**
+ * Setzt eine Fake-Time?? 
+ * unkwn
+ */
 function faketime($value) {
 	return date("i:s:00",strtotime("1970-01-01 ".$value." UTC"));
 }
